@@ -1,0 +1,25 @@
+# 基础数学与数据处理
+numpy==1.21.5
+pandas==1.4.2
+joblib==1.1.0
+
+# 机器学习核心库
+scikit-learn==1.0.2
+xgboost==1.5.1
+lightgbm==3.3.2
+tensorflow==2.8.0
+
+# 模型解释性
+shap==0.40.0
+
+# 遗传算法优化 (Genetic Algorithm)
+geatpy==2.7.0
+
+# 地理空间数据处理 (GIS)
+geopandas==0.10.2
+pyogrio==0.3.0
+pyarrow==7.0.0
+
+# 绘图与可视化
+matplotlib==3.5.1
+seaborn==0.11.2
