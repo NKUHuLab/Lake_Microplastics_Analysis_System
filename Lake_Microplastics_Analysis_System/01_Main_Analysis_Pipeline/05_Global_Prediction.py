@@ -41,7 +41,10 @@ def predict_and_create_shp():
     except (KeyError, AttributeError) as e:
         print(f"Error aligning feature columns. Error: {e}")
         return
-    X_predict.fillna(X_predict.median(), inplace=True)
+    if X_predict.isna().any().any():
+            if not hasattr(model, "training_feature_medians_"):
+                raise ValueError("Missing training-set imputation statistics; refit with the training script before predicting incomplete inputs.")
+            X_predict = X_predict.fillna(model.training_feature_medians_)
 
     # 4. Make Predictions on the ENTIRE feature set
     print(f"Making predictions on all {len(features_df)} data points...")

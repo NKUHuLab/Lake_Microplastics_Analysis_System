@@ -1,16 +1,14 @@
 # -*- coding: utf-8 -*-
 """
-R1C3 v6: 指标对齐版 —— Pearson r (Corr) 替代 sklearn R²
-   - CV scoring = make_scorer(lambda y,p: np.corrcoef(y,p)[0,1])
-   - 报告 Corr (Pearson r) 和 R² (Corr²)
-   - 原文约定: R² = Corr² ≈ 0.78 (与 00_Model_Comparison.py 对齐)
+OSMProxy v6: report Pearson r, r², and conventional test-set R² separately.
    - 地图保留 Python (面渲染 Robin投影)
    - 导出 CSV 供 R 可视化脚本消费
 
-指标准则:
+Metric definitions:
    Corr = Pearson correlation coefficient (r)
-   R²   = Corr² (squared Pearson r)
-   OOB  = Pearson r on OOB predictions (非 sklearn oob_score_)
+   r² = squared Pearson correlation (reported for compatibility)
+   R² = sklearn r2_score on held-out predictions
+   OOB Corr = Pearson r on sklearn's OOB predictions
 """
 
 import os, sys, warnings, json
@@ -25,10 +23,10 @@ from scipy import stats
 from scipy.spatial import cKDTree
 from sklearn.linear_model import LogisticRegression, LinearRegression
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.model_selection import cross_val_score, ShuffleSplit
+from sklearn.model_selection import ShuffleSplit
+from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import make_scorer
-from sklearn.utils import resample
+from sklearn.metrics import r2_score
 
 warnings.filterwarnings("ignore")
 plt.rcParams.update({
@@ -66,12 +64,9 @@ RF_P = dict(bootstrap=True, max_depth=10, max_features=0.5,
             n_estimators=500, random_state=42, n_jobs=-1, oob_score=True)
 cv_s = ShuffleSplit(n_splits=10, test_size=0.2, random_state=42)
 
-# ── Pearson r scorer (替代 sklearn 'r2') ──
 def pearson_r(y_true, y_pred):
-    """Pearson correlation coefficient — the ONE metric that matters."""
+    """Pearson correlation coefficient."""
     return np.corrcoef(y_true.flatten(), y_pred.flatten())[0, 1]
-
-pearson_scorer = make_scorer(pearson_r)
 
 def sp(fig, name):
     for e, d in [('.svg', None), ('.pdf', None), ('.png', 600)]:
@@ -87,34 +82,49 @@ def make_world():
     wb = wf[~wf[nc].str.contains('russia', case=False, na=False)]
     return wf, wb
 
-def cv_pearson_model(X, y, cv_splitter):
-    """Cross-validate with Pearson r, return array of r values per fold."""
-    scores = []
+def cv_model_metrics(X, y, cv_splitter):
+    """Evaluate folds with an imputer fitted only on each training partition."""
+    pearson_scores = []
+    r2_scores = []
     for train_idx, test_idx in cv_splitter.split(X):
-        X_tr, X_te = X[train_idx], X[test_idx]
+        imputer = SimpleImputer(strategy='median')
+        X_tr = imputer.fit_transform(X[train_idx])
+        X_te = imputer.transform(X[test_idx])
         y_tr, y_te = y[train_idx], y[test_idx]
         m = RandomForestRegressor(**RF_P)
         m.fit(X_tr, y_tr)
         y_pred = m.predict(X_te)
-        scores.append(pearson_r(y_te, y_pred))
-    return np.array(scores)
+        pearson_scores.append(pearson_r(y_te, y_pred))
+        r2_scores.append(r2_score(y_te, y_pred))
+    return np.asarray(pearson_scores), np.asarray(r2_scores)
 
-def oob_pearson(model, X, y):
-    """Compute OOB Pearson r by aggregating OOB predictions per tree."""
-    n_samples = X.shape[0]
-    oob_pred = np.zeros(n_samples)
-    oob_count = np.zeros(n_samples)
-    for tree in model.estimators_:
-        unsampled = np.setdiff1d(np.arange(n_samples),
-                                 np.unique(tree.random_state if hasattr(tree, 'random_state')
-                                           else np.random.RandomState(42).choice(n_samples, n_samples, replace=True)))
-        if len(unsampled) > 0:
-            oob_pred[unsampled] += tree.predict(X[unsampled])
-            oob_count[unsampled] += 1
-    valid = oob_count > 0
-    if valid.sum() < 10:
-        return pearson_r(y, model.oob_prediction_)
-    return pearson_r(y[valid], oob_pred[valid] / oob_count[valid])
+def oob_pearson(model, y):
+    """Compute Pearson r from RandomForestRegressor's actual OOB predictions."""
+    oob_predictions = np.asarray(model.oob_prediction_)
+    valid = np.isfinite(oob_predictions) & np.isfinite(y)
+    if valid.sum() < 2:
+        return np.nan
+    return pearson_r(np.asarray(y)[valid], oob_predictions[valid])
+
+
+def partial_pearson(x, y, controls):
+    """Partial Pearson correlation and two-sided t-test with control df."""
+    controls = np.asarray(controls)
+    x_resid = np.asarray(x) - LinearRegression().fit(controls, x).predict(controls)
+    y_resid = np.asarray(y) - LinearRegression().fit(controls, y).predict(controls)
+    r, _ = stats.pearsonr(x_resid, y_resid)
+    control_rank = np.linalg.matrix_rank(np.column_stack([np.ones(len(x_resid)), controls])) - 1
+    df = len(x_resid) - control_rank - 2
+    if df <= 0 or not np.isfinite(r):
+        return r, np.nan
+    t_stat = r * np.sqrt(df / max(1.0 - r ** 2, np.finfo(float).eps))
+    return r, 2 * stats.t.sf(abs(t_stat), df)
+
+
+def correlation_se(r, n, n_controls=0):
+    """Delta-method standard error for a correlation coefficient."""
+    df = n - n_controls - 3
+    return (1 - r ** 2) / np.sqrt(df) if df > 0 else np.nan
 
 # ═══════════════════════════════════════════════════════════════════
 # LOAD DATA
@@ -122,7 +132,7 @@ def oob_pearson(model, X, y):
 print("Loading data...")
 train = pd.read_csv(os.environ.get('LAKE_MP_TRAIN_DATA', os.path.join(DATA_ROOT, 'model_products', 'train_data.csv')))
 osm_tr = pd.read_csv(os.path.join(PROXY, '训练数据_OSM_direct_proxy.csv'))
-Xo = train[FT].fillna(train[FT].median()).values
+Xo_raw = train[FT].to_numpy()
 y = train['ln'].values
 fg = train['fish_gdp_sqkm'].values
 fl = np.log1p(fg)
@@ -135,54 +145,59 @@ has_o = (oc > 0).astype(int)
 # ═══════════════════════════════════════════════════════════════════
 print("\n=== Training with Pearson r metric ===")
 
+imputer_A = SimpleImputer(strategy='median').fit(Xo_raw)
+Xo = imputer_A.transform(Xo_raw)
+
 # Model A: Original (fish_gdp)
 mA = RandomForestRegressor(**RF_P)
 mA.fit(Xo, y)
-sA_r = cv_pearson_model(Xo, y, cv_s)
-oobA = oob_pearson(mA, Xo, y)
+sA_r, sA_r2 = cv_model_metrics(Xo_raw, y, cv_s)
+oobA = oob_pearson(mA, y)
 imp_A = mA.feature_importances_
 rank_A = np.argsort(imp_A)[::-1].tolist().index(FI) + 1
 
 # Model B: OSM proxy replaces fish_gdp
-XB = Xo.copy()
-XB[:, FI] = ol
+XB_raw = Xo_raw.copy()
+XB_raw[:, FI] = ol
+imputer_B = SimpleImputer(strategy='median').fit(XB_raw)
+XB = imputer_B.transform(XB_raw)
 mB = RandomForestRegressor(**RF_P)
 mB.fit(XB, y)
-sB_r = cv_pearson_model(XB, y, cv_s)
-oobB = oob_pearson(mB, XB, y)
+sB_r, sB_r2 = cv_model_metrics(XB_raw, y, cv_s)
+oobB = oob_pearson(mB, y)
 imp_B = mB.feature_importances_
 rank_B = np.argsort(imp_B)[::-1].tolist().index(FI) + 1
 
 # Model C: No fishery
-XC = np.delete(Xo, FI, axis=1)
+XC_raw = np.delete(Xo_raw, FI, axis=1)
+imputer_C = SimpleImputer(strategy='median').fit(XC_raw)
+XC = imputer_C.transform(XC_raw)
 mC = RandomForestRegressor(**RF_P)
 mC.fit(XC, y)
-sC_r = cv_pearson_model(XC, y, cv_s)
-oobC_val = oob_pearson(mC, XC, y)
+sC_r, sC_r2 = cv_model_metrics(XC_raw, y, cv_s)
+oobC_val = oob_pearson(mC, y)
 
 # Model D: Confounders only
-XD = Xo[:, :7]
+XD_raw = Xo_raw[:, :7]
+imputer_D = SimpleImputer(strategy='median').fit(XD_raw)
+XD = imputer_D.transform(XD_raw)
 mD = RandomForestRegressor(**RF_P)
 mD.fit(XD, y)
-sD_r = cv_pearson_model(XD, y, cv_s)
-oobD_val = oob_pearson(mD, XD, y)
+sD_r, sD_r2 = cv_model_metrics(XD_raw, y, cv_s)
+oobD_val = oob_pearson(mD, y)
 
-# Report as Corr AND R²=Corr²
+# Report Pearson r, r² (compatibility), and conventional held-out R² separately.
 models_r = [
-    ('fish_gdp', sA_r.mean(), sA_r.std(), oobA,
-     sA_r.mean()**2, (sA_r.mean() + sA_r.std())**2 - sA_r.mean()**2),
-    ('OSM proxy', sB_r.mean(), sB_r.std(), oobB,
-     sB_r.mean()**2, (sB_r.mean() + sB_r.std())**2 - sB_r.mean()**2),
-    ('No fishery', sC_r.mean(), sC_r.std(), oobC_val,
-     sC_r.mean()**2, (sC_r.mean() + sC_r.std())**2 - sC_r.mean()**2),
-    ('Confounders', sD_r.mean(), sD_r.std(), oobD_val,
-     sD_r.mean()**2, (sD_r.mean() + sD_r.std())**2 - sD_r.mean()**2),
+    ('fish_gdp', sA_r.mean(), sA_r.std(), sA_r.mean() ** 2, sA_r2.mean(), sA_r2.std(), oobA),
+    ('OSM proxy', sB_r.mean(), sB_r.std(), sB_r.mean() ** 2, sB_r2.mean(), sB_r2.std(), oobB),
+    ('No fishery', sC_r.mean(), sC_r.std(), sC_r.mean() ** 2, sC_r2.mean(), sC_r2.std(), oobC_val),
+    ('Confounders', sD_r.mean(), sD_r.std(), sD_r.mean() ** 2, sD_r2.mean(), sD_r2.std(), oobD_val),
 ]
 
-print(f"\n  {'Model':<20} {'Corr (r)':>10} {'+/-':>8} {'R2=r2':>10} {'OOB r':>10}")
+print(f"\n  {'Model':<20} {'Corr (r)':>10} {'+/-':>8} {'r²':>10} {'R²':>10} {'OOB r':>10}")
 print(f"  {'-' * 60}")
-for n, r, s, o, r2, _ in models_r:
-    print(f"  {n:<20} {r:>10.4f} {s:>8.4f} {r2:>10.4f} {o:>10.4f}")
+for n, r, r_sd, r_squared, r2, r2_sd, oob_r in models_r:
+    print(f"  {n:<20} {r:>10.4f} {r_sd:>8.4f} {r_squared:>10.4f} {r2:>10.4f} {oob_r:>10.4f}")
 
 print(f"\n  fish_gdp importance: {imp_A[FI]:.4f} (rank {rank_A}/22)")
 print(f"  OSM proxy importance: {imp_B[FI]:.4f} (rank {rank_B}/22)")
@@ -199,11 +214,11 @@ pr_r, pr_p = stats.pearsonr(fl, ol)
 # Partial correlation
 conf_cols = ['Cultivated_land', 'Artificial_surface', 'Total_POP_SERVED',
              'prec', 'Lake_area', 'Shore_dev', 'Res_time']
-Xc = train[conf_cols].fillna(train[conf_cols].median()).values
+Xc = SimpleImputer(strategy='median').fit_transform(train[conf_cols])
 Xcs = StandardScaler().fit_transform(Xc)
-lr_f = LinearRegression().fit(Xcs, fl)
-lr_y = LinearRegression().fit(Xcs, y)
-adj_r, adj_p = stats.pearsonr(fl - lr_f.predict(Xcs), y - lr_y.predict(Xcs))
+X_pop = SimpleImputer(strategy='median').fit_transform(train[['Total_POP_SERVED']])
+partial_pop_r, partial_pop_p = partial_pearson(fl, y, X_pop)
+adj_r, adj_p = partial_pearson(fl, y, Xcs)
 
 # Propensity score stratification
 ps_m = LogisticRegression(C=1.0, random_state=42).fit(Xcs, has_o)
@@ -221,7 +236,8 @@ for s in ['Q1(low)', 'Q2', 'Q3', 'Q4', 'Q5(high)']:
         })
 
 print(f"  Spearman ρ (fish_gdp vs OSM) = {sr:.4f}, p = {spv:.2e}")
-print(f"  Partial ρ (conf controlled)  = {adj_r:.4f}, p = {adj_p:.2e}")
+print(f"  Partial r (population controlled) = {partial_pop_r:.4f}, p = {partial_pop_p:.2e}")
+print(f"  Partial r (all confounders controlled) = {adj_r:.4f}, p = {adj_p:.2e}")
 for psr in ps_results:
     print(f"    {psr['stratum']}: n={psr['n']}, ρ={psr['r']:.4f}, p={psr['p']:.2e}, OSM%={psr['osm_pct']:.0%}")
 
@@ -231,15 +247,17 @@ for psr in ps_results:
 print("\n=== Global Prediction Comparison ===")
 fa = pd.read_csv(os.environ.get('LAKE_MP_PREDICT_DATA', os.path.join(DATA_ROOT, 'model_products', 'feature_2022.csv.gz')))
 fa.columns = fa.columns.str.strip()
-Xg = fa[FT].fillna(fa[FT].median()).values
+Xg_raw = fa[FT].to_numpy()
+Xg = imputer_A.transform(Xg_raw)
 pred_A = mA.predict(Xg)
 
 osm_g = pd.read_csv(os.path.join(PROXY, '全球湖泊_OSM_direct_proxy.csv'))
 _, io_ = cKDTree(osm_g[['lon', 'lat']].values).query(
     fa[['lon', 'lat']].values, k=1)
 osm_matched = osm_g.iloc[io_]['OSM_direct_count_25km'].values
-XgB = Xg.copy()
-XgB[:, FI] = np.log1p(osm_matched)
+XgB_raw = Xg_raw.copy()
+XgB_raw[:, FI] = np.log1p(osm_matched)
+XgB = imputer_B.transform(XgB_raw)
 pred_B = mB.predict(XgB)
 
 # Global prediction correlation (Pearson r)
@@ -305,7 +323,7 @@ gdf_data.plot(column='plot_value', cmap='viridis', norm=norm,
 wb.plot(ax=ax1, color='none', edgecolor='grey', linewidth=0.5, zorder=4)
 ax1.set_axis_off()
 for e, d in [('.png', 300), ('.pdf', 300)]:
-    fig1.savefig(os.path.join(OUT_F, f'R1C3_Fig1_OSM_Map{e}'),
+    fig1.savefig(os.path.join(OUT_F, f'OSMProxy_Fig1_OSM_Map{e}'),
                  dpi=d, bbox_inches='tight', pad_inches=0.1)
 plt.close(fig1)
 
@@ -319,7 +337,7 @@ im = ad.imshow(gd_arr, aspect='auto', cmap='viridis', norm=norm)
 cb = flg.colorbar(im, cax=al, orientation='vertical')
 cb.set_label("log10(OSM count + 1)", fontsize=14, weight='bold', labelpad=15)
 cb.ax.tick_params(labelsize=12)
-flg.savefig(os.path.join(OUT_F, 'R1C3_Fig1_OSM_Map_legend.pdf'),
+flg.savefig(os.path.join(OUT_F, 'OSMProxy_Fig1_OSM_Map_legend.pdf'),
             format='pdf', bbox_inches='tight')
 plt.close(flg)
 print("  Fig1 saved")
@@ -362,7 +380,7 @@ mp_p[~na3].plot(column='plot_value', cmap='RdBu_r', norm=norm3,
 wb.plot(ax=ax3, color='none', edgecolor='grey', linewidth=0.5, zorder=4)
 ax3.set_axis_off()
 for e, d in [('.png', 300), ('.pdf', 300)]:
-    fig3.savefig(os.path.join(OUT_F, f'R1C3_Fig3_Prediction_Diff_Map{e}'),
+    fig3.savefig(os.path.join(OUT_F, f'OSMProxy_Fig3_Prediction_Diff_Map{e}'),
                  dpi=d, bbox_inches='tight', pad_inches=0.1)
 plt.close(fig3)
 
@@ -374,7 +392,7 @@ im3 = ad3.imshow(gd3, aspect='auto', cmap='RdBu_r')
 cb3 = flg3.colorbar(im3, cax=al3, orientation='vertical')
 cb3.set_label("Δ ln(MP)", fontsize=14, weight='bold', labelpad=15)
 cb3.ax.tick_params(labelsize=12)
-flg3.savefig(os.path.join(OUT_F, 'R1C3_Fig3_Prediction_Diff_Map_legend.pdf'),
+flg3.savefig(os.path.join(OUT_F, 'OSMProxy_Fig3_Prediction_Diff_Map_legend.pdf'),
              format='pdf', bbox_inches='tight')
 plt.close(flg3)
 print("  Fig3 saved")
@@ -395,19 +413,23 @@ r_data = pd.DataFrame({
     'propensity_score': ps,
     'stratum': strata.astype(str)
 })
-r_data.to_csv(os.path.join(OUT_D, 'R1C3_r_validation_data.csv'), index=False)
+r_data.to_csv(os.path.join(OUT_D, 'OSMProxy_r_validation_data.csv'), index=False)
 
-# R2: model comparison (for Fig2 dumbbell + forest)
+# Model comparison: Pearson correlation and predictive R2 are separate metrics.
+oob_r2_by_model = dict(zip(['fish_gdp', 'OSM proxy', 'No fishery', 'Confounders'],
+                           [mA.oob_score_, mB.oob_score_, mC.oob_score_, mD.oob_score_]))
 r_models = pd.DataFrame([{
     'model': n,
     'corr_mean': r,
     'corr_sd': s,
-    'r2_mean': r ** 2,
-    'r2_sd': (r + s) ** 2 - r ** 2 if (r + s) ** 2 > r ** 2 else s * 2 * r,
+    'corr_squared': r_squared,
+    'r2_mean': predictive_r2,
+    'r2_sd': predictive_r2_sd,
     'oob_corr': o,
-    'oob_r2': o ** 2
-} for n, r, s, o, _, _ in models_r])
-r_models.to_csv(os.path.join(OUT_D, 'R1C3_r_model_comparison.csv'), index=False)
+    'oob_corr_squared': o ** 2,
+    'oob_r2': oob_r2_by_model[n]
+} for n, r, s, r_squared, predictive_r2, predictive_r2_sd, o in models_r])
+r_models.to_csv(os.path.join(OUT_D, 'OSMProxy_r_model_comparison.csv'), index=False)
 
 # R3: feature importance (for Fig2 radial/diverging)
 imp_df = pd.DataFrame({
@@ -416,11 +438,11 @@ imp_df = pd.DataFrame({
     'osm_proxy_model': imp_B,
     'difference': imp_A - imp_B
 })
-imp_df.to_csv(os.path.join(OUT_D, 'R1C3_r_feature_importance.csv'), index=False)
+imp_df.to_csv(os.path.join(OUT_D, 'OSMProxy_r_feature_importance.csv'), index=False)
 
 # R4: propensity score (for Fig2 dot-whisker)
 r_ps = pd.DataFrame(ps_results)
-r_ps.to_csv(os.path.join(OUT_D, 'R1C3_r_propensity_score.csv'), index=False)
+r_ps.to_csv(os.path.join(OUT_D, 'OSMProxy_r_propensity_score.csv'), index=False)
 
 # R5: global predictions sample (for Fig2 effect sizes + Fig4)
 n_sample = min(30000, len(pred_A))
@@ -437,7 +459,7 @@ r_preds = pd.DataFrame({
     'hot_A99': (pred_A[sample_idx] >= th_A99).astype(int),
     'hot_B99': (pred_B[sample_idx] >= th_B99).astype(int),
 })
-r_preds.to_csv(os.path.join(OUT_D, 'R1C3_r_prediction_sample.csv'), index=False)
+r_preds.to_csv(os.path.join(OUT_D, 'OSMProxy_r_prediction_sample.csv'), index=False)
 
 # R6: alluvial data for hotspot flow (Fig4B)
 flow_data = pd.DataFrame({
@@ -455,21 +477,22 @@ flow_data = pd.DataFrame({
         int(((pred_A >= th_A99) & (pred_B >= th_B99)).sum()),
     ]
 })
-flow_data.to_csv(os.path.join(OUT_D, 'R1C3_r_flow_data.csv'), index=False)
+flow_data.to_csv(os.path.join(OUT_D, 'OSMProxy_r_flow_data.csv'), index=False)
 
 # R7: effect sizes consolidated
 effect_sizes = pd.DataFrame({
     'method': ['Spearman ρ', 'Pearson r (log-log)', 'Partial (pop ctrl)',
                'Partial (all conf)', 'Propensity Q1', 'Propensity Q5'],
-    'value': [sr, pr_r, 0.147, adj_r,
+    'value': [sr, pr_r, partial_pop_r, adj_r,
               ps_results[0]['r'], ps_results[-1]['r']],
-    'se': [0.036, 0.036, 0.036, 0.036,
-           1.96 / np.sqrt(ps_results[0]['n'] - 3),
-           1.96 / np.sqrt(ps_results[-1]['n'] - 3)],
-    'p_value': [spv, pr_p, 0.001, adj_p,
-                ps_results[0]['p'], ps_results[-1]['p']],
+    'se': [correlation_se(sr, len(y)), correlation_se(pr_r, len(y)),
+           correlation_se(partial_pop_r, len(y), 1), correlation_se(adj_r, len(y), Xcs.shape[1]),
+           correlation_se(ps_results[0]['r'], ps_results[0]['n']),
+           correlation_se(ps_results[-1]['r'], ps_results[-1]['n'])],
+    'p_value': [spv, pr_p, partial_pop_p, adj_p,
+               ps_results[0]['p'], ps_results[-1]['p']],
 })
-effect_sizes.to_csv(os.path.join(OUT_D, 'R1C3_r_effect_sizes.csv'), index=False)
+effect_sizes.to_csv(os.path.join(OUT_D, 'OSMProxy_r_effect_sizes.csv'), index=False)
 
 # R8: regional validation (get from data)
 import cartopy.io.shapereader as shpreader
@@ -497,7 +520,7 @@ for reg in ['Asia', 'Europe', 'North America', 'South America', 'Africa', 'Ocean
             'osm_mean': float(oc[mask].mean()),
         })
 r_regional = pd.DataFrame(reg_data)
-r_regional.to_csv(os.path.join(OUT_D, 'R1C3_r_regional_validation.csv'), index=False)
+r_regional.to_csv(os.path.join(OUT_D, 'OSMProxy_r_regional_validation.csv'), index=False)
 
 # ═══════════════════════════════════════════════════════════════════
 # SAVE RESULTS JSON (v6)
@@ -521,7 +544,7 @@ only_B99 = hot_B99 & ~hot_A99
 jac99 = both99.sum() / (both99.sum() + only_A99.sum() + only_B99.sum())
 
 v6_results = {
-    'metric_note': 'All CV and OOB metrics use Pearson r (Corr). R2 = Corr^2.',
+    'metric_note': 'Pearson r and squared correlation are separate from predictive R2 (1-SSE/SST). OOB metrics are conditional on the final preprocessing.',
     'validation': {
         'spearman_r': float(sr), 'spearman_p': float(spv),
         'pearson_r': float(pr_r), 'pearson_p': float(pr_p),
@@ -532,9 +555,10 @@ v6_results = {
     'models': [{
         'name': n,
         'cv_corr': float(r), 'cv_corr_std': float(s),
-        'cv_r2': float(r ** 2), 'cv_r2_std': float((r + s) ** 2 - r ** 2 if (r + s) ** 2 > r ** 2 else s * 2 * r),
-        'oob_corr': float(o), 'oob_r2': float(o ** 2)
-    } for n, r, s, o, _, _ in models_r],
+        'cv_corr_squared': float(r_squared),
+        'cv_r2': float(predictive_r2), 'cv_r2_std': float(predictive_r2_sd),
+        'oob_corr': float(o), 'oob_corr_squared': float(o ** 2), 'oob_r2': float(oob_r2_by_model[n])
+    } for n, r, s, r_squared, predictive_r2, predictive_r2_sd, o in models_r],
     'feature_importance': {
         'fish_gdp_rank': int(rank_A),
         'fish_gdp_importance': float(imp_A[FI]),
@@ -559,21 +583,21 @@ v6_results = {
     'prediction_corr': float(pred_corr),
 }
 
-with open(os.path.join(OUT_D, 'R1C3_final_results_v6.json'), 'w') as f:
+with open(os.path.join(OUT_D, 'OSMProxy_final_results_v6.json'), 'w') as f:
     json.dump(v6_results, f, indent=2, ensure_ascii=False)
 
 # ═══════════════════════════════════════════════════════════════════
 # SUMMARY
 # ═══════════════════════════════════════════════════════════════════
-fish_r2 = models_r[0][4]  # fish_gdp model R2 = Corr2
+fish_r2 = models_r[0][4]  # fish_gdp model mean held-out predictive R2
 osm_r2 = models_r[1][4]
 
 print(f"""
 +======================================================================+
-|  R1C3 v6 - Pearson r Metric (aligned with 00_Model_Comparison.py)   |
+|  OSM proxy validation: Pearson r and held-out predictive R2   |
 +======================================================================+
 | fish_gdp CV Corr (Pearson r)        | {models_r[0][1]:.4f}   | +/- {models_r[0][2]:.4f}            |
-| fish_gdp CV R2   (Corr2)            | {fish_r2:.4f}   |                   |
+| fish_gdp held-out R2            | {fish_r2:.4f}   |                   |
 | OSM proxy CV Corr                    | {models_r[1][1]:.4f}   | +/- {models_r[1][2]:.4f}            |
 | OSM proxy CV R2                      | {osm_r2:.4f}   |                   |
 | fish_gdp importance rank             | #{rank_A}/22 | {imp_A[FI]:.4f}             |
@@ -585,8 +609,8 @@ print(f"""
 | Prediction correlation (r)           | {pred_corr:.4f}   |                   |
 | Agreement (|d|<0.5 ln)              | {agree_pct:.1f}%  |                   |
 +======================================================================+
-| NOTE: R2 = (Pearson r)^2.                                            |
-| fish_gdp model: Corr ~ {models_r[0][1]:.3f} -> R2 ~ {fish_r2:.3f}                     |
+| NOTE: R2 is 1-SSE/SST; it is not squared correlation.                                            |
+| fish_gdp model: Corr ~ {models_r[0][1]:.3f} ; predictive R2 ~ {fish_r2:.3f}                     |
 +======================================================================+
 """)
 

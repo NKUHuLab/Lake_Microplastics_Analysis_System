@@ -7,13 +7,14 @@ from sklearn.model_selection import ShuffleSplit
 from sklearn.preprocessing import RobustScaler, PowerTransformer
 from sklearn.neural_network import MLPRegressor
 from sklearn.pipeline import Pipeline
+from sklearn.impute import SimpleImputer
 from sklearn.compose import TransformedTargetRegressor
 from sklearn.metrics import mean_squared_error, r2_score
 from tqdm import tqdm
 
 # It's good practice to have the config in a separate, importable file
 try:
-    from code import config
+    import config
 except (ImportError, ModuleNotFoundError):
     print("Warning: Could not import 'config' from 'code' directory.")
     print("Please ensure this script is run from the project's root directory or adjust the path.")
@@ -76,7 +77,6 @@ def evaluate_mlp_model():
         X.loc[X['Res_time'] <= 0, 'Res_time'] = np.nan
 
     print("Imputing missing values with column medians...")
-    X = X.fillna(X.median())
 
     # The incorrect np.log1p step is now removed.
     print("\n--- Data Cleaning Complete ---")
@@ -84,6 +84,7 @@ def evaluate_mlp_model():
     # 3. Define a robust model pipeline
     # This pipeline will first transform the data to be more Gaussian, then scale it.
     mlp_pipeline = Pipeline([
+        ("imputer", SimpleImputer(strategy="median")),
         # FIX: Use PowerTransformer to handle skewness and negative values correctly.
         ('power_transform', PowerTransformer(method='yeo-johnson')),
         ('scaler', RobustScaler()),

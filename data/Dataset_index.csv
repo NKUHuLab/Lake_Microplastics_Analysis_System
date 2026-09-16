@@ -6,5 +6,5 @@ data/evidence/Pathway_source_checked_subset.csv,27,Retained curated source-linke
 data/evidence/Box_model_parameters.csv,122,Only records with documented prior local-PDF reading and retained source locator; model settings and measurements remain distinguished.
 data/model_products/lake_prediction_uncertainty_high.csv,130736,"Frozen High reliability class; valid finite values and unique coordinates. Model reliability, not empirical concentration validation."
 data/model_products/lake_aggregate_exposure_high.csv,7161,"Same lakes as released SHP; High model reliability, coordinate/prediction match, valid geometry, and no known >100% overlap flag. Baseline category aggregates, not confirmed occupancy."
-analysis/revision/r1c4/data/numeric_inputs.csv,185,Complete frozen numerical runtime inputs; retain original verification fields.
+analysis/modules/pathway_attribution/data/numeric_inputs.csv,185,Complete frozen numerical runtime inputs; retain original verification fields.
 data/geospatial/lake_prediction_exposure_high.zip,7161,"High reliability, valid geometry, coordinate/prediction matched and known overlap-flagged lakes excluded."

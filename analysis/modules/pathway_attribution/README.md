@@ -1,6 +1,6 @@
 # Literature-informed pathway scenario analysis
 
-Run `python analysis/revision/r1c4/code/run_all.py` from the repository root after installing this directory's `requirements.txt` (NumPy and pandas).
+Run `python analysis/modules/pathway_attribution/code/run_all.py` from the repository root after installing this directory's `requirements.txt` (NumPy and pandas).
 
 ## Inputs and calculation
 

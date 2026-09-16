@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 from shapely.geometry import MultiPoint
-from code import config
+import config
 import warnings
 import os
 

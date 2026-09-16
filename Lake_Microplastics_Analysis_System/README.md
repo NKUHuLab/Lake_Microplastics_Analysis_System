@@ -1,4 +1,4 @@
-# Lake Microplastics Analysis System (revision update)
+# Lake Microplastics Analysis System
 This repository contains the source code, data processing pipelines, and optimization engines used in the study: "Intensive Aquaculture Contributes to Microplastic Pollution and Threatens Species in Lakes".
 ________________________________________
 # 1. System Requirements
@@ -49,11 +49,11 @@ The existing feature demonstration dataset is [Demo_dataset.csv](Demo_dataset.cs
 For a runnable revision example with all its numerical inputs included, execute from the repository root (one directory above this README):
 
 ```sh
-pip install -r analysis/revision/r1c4/requirements.txt
-python analysis/revision/r1c4/code/run_all.py
+pip install -r analysis/modules/pathway_attribution/requirements.txt
+python analysis/modules/pathway_attribution/code/run_all.py
 ```
 
-This reproduces 10,000 literature-informed Monte Carlo draws and checks agreement with the frozen final pathway results. Outputs are written to `analysis/revision/r1c4/outputs/`. See the [pathway calculation guide](../analysis/revision/r1c4/README.md) for inputs, methods and interpretation.
+This reproduces 10,000 literature-informed Monte Carlo draws and checks agreement with the frozen final pathway results. Outputs are written to `analysis/modules/pathway_attribution/outputs/`. See the [pathway calculation guide](../analysis/modules/pathway_attribution/README.md) for inputs, methods and interpretation.
 
 ________________________________________
 # 4. Instructions for Use
@@ -76,12 +76,12 @@ The original workflow remains in `Lake_Microplastics_Analysis_System/`:
 | 4 | `02_Biodiversity_Risk_IUCN/` | Species–lake exposure analyses |
 | 5 | `01_Main_Analysis_Pipeline/14_GA_Optimization_Engine.ipynb` | Mitigation scenario optimization |
 
-Selected revision analyses are in [analysis/revision](../analysis/revision/README.md), including grouped validation, hydrological moderation, biological sensitivity and trait controls, OSM proxies, training-subset sensitivity and literature-informed pathway calculations. Their original input requirements remain in place; selected publication products do not replace the full analysis samples.
+Selected revision analyses are in [analysis/modules](../analysis/modules/README.md), including grouped validation, hydrological moderation, biological sensitivity and trait controls, OSM proxies, training-subset sensitivity and literature-informed pathway calculations. Their original input requirements remain in place; selected publication products do not replace the full analysis samples.
 
 The standalone two-box equations and residence-time scenario can be run with:
 
 ```sh
-python analysis/revision/hydrology_gam_and_box_model/box_model_core.py
+python analysis/modules/hydrology_gam_and_box_model/box_model_core.py
 ```
 
 # How to use on your own data
@@ -91,7 +91,7 @@ python analysis/revision/hydrology_gam_and_box_model/box_model_core.py
 
 # 5. Selected Data
 
-See the [dataset index](../data/Dataset_index.csv) and [data guide](../data/README.md) for selected lake-level OSM proxies, box-model parameter evidence, costs, implementation and related timing, checked pathway sources, and lake predictions with uncertainty. The [SHP archive](../data/geospatial/lake_prediction_exposure_high.zip) contains selected lake polygons with uncertainty and derived aggregate exposure attributes, together with its field dictionary and selection criteria. All numerical inputs used in the revised pathway calculation are included under `analysis/revision/r1c4/`.
+See the [dataset index](../data/Dataset_index.csv) and [data guide](../data/README.md) for selected lake-level OSM proxies, box-model parameter evidence, costs, implementation and related timing, checked pathway sources, and lake predictions with uncertainty. The [SHP archive](../data/geospatial/lake_prediction_exposure_high.zip) contains selected lake polygons with uncertainty and derived aggregate exposure attributes, together with its field dictionary and selection criteria. All numerical inputs used in the revised pathway calculation are included under `analysis/modules/pathway_attribution/`.
 
 The water and biota supplementary datasets and the existing feature demo are not duplicated in this update. Model reliability classes and source-verification scopes are described separately in the data guide. Data curation is ongoing.
 
@@ -101,3 +101,5 @@ The software is licensed under the [MIT License](License). Data reuse follows th
 # Contact
 For any issues or questions, please contact Xiangang Hu (huxiangang@nankai.edu.cn).
 
+
+See [methods, explicit assumptions and code corrections](../docs/methods_and_validation.md) for the current validation boundary and analyses requiring a fresh full-data run.

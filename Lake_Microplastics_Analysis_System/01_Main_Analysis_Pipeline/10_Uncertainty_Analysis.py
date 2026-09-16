@@ -7,9 +7,8 @@ import joblib
 import os
 import matplotlib.pyplot as plt
 import geopandas as gpd
-from scipy.stats import t
 from tqdm import tqdm
-from code import config
+import config
 
 # Apply global plot settings
 plt.rcParams.update(config.PLT_RC_PARAMS)
@@ -17,7 +16,8 @@ plt.rcParams.update(config.PLT_RC_PARAMS)
 
 def analyze_uncertainty():
     """
-    Calculates prediction uncertainty for all features and maps the results onto the base global shapefile.
+    Calculates descriptive dispersion among trees on the log-response scale.
+    This is not a sampling confidence interval or a per-lake significance test.
     """
     print("--- Step 10: Starting Uncertainty Analysis ---")
 
@@ -40,7 +40,10 @@ def analyze_uncertainty():
     try:
         model_feature_order = model.feature_names_in_
         X_predict = features_df[model_feature_order].copy()
-        X_predict.fillna(X_predict.median(), inplace=True)
+        if X_predict.isna().any().any():
+            if not hasattr(model, "training_feature_medians_"):
+                raise ValueError("Missing training-set imputation statistics; refit with the training script before predicting incomplete inputs.")
+            X_predict = X_predict.fillna(model.training_feature_medians_)
     except (KeyError, AttributeError) as e:
         print(f"Error aligning data columns with the model's expected features. Error: {e}")
         return
@@ -50,18 +53,15 @@ def analyze_uncertainty():
     predictions_per_tree = [tree.predict(X_predict) for tree in tqdm(model.estimators_, desc="Trees")]
     predictions_matrix = np.array(predictions_per_tree)
 
-    print("  Calculating uncertainty and p-values...")
+    print("  Calculating descriptive tree dispersion...")
     mean_predictions = predictions_matrix.mean(axis=0)
     std_predictions = predictions_matrix.std(axis=0)
     uncertainty = std_predictions / (np.abs(mean_predictions) + 1e-9)
 
-    t_stats = mean_predictions / (std_predictions / np.sqrt(len(model.estimators_)) + 1e-9)
-    p_values = t.sf(np.abs(t_stats), df=len(model.estimators_) - 1) * 2
 
     # 4. Create a DataFrame with the results
     results_df = features_df[['lon', 'lat']].copy()
     results_df['Uncertainty'] = uncertainty
-    results_df['p_value'] = p_values
     results_df.to_csv(config.UNCERTAINTY_CSV_PATH, index=False)
     print(f"Uncertainty results saved to CSV: {config.UNCERTAINTY_CSV_PATH}")
 
@@ -79,8 +79,8 @@ def analyze_uncertainty():
         print("  Aggregating results for lakes with multiple points...")
         # Get the original geometry, which is lost during groupby
         geometries = base_geo_df.loc[gdf_uncertainty.index.unique()].geometry
-        # The columns to aggregate are Uncertainty and p_value
-        agg_cols = ['Uncertainty', 'p_value']
+        # Aggregate descriptive tree-dispersion ratios only
+        agg_cols = ['Uncertainty']
         # Group by the original polygon index and average the results
         aggregated_data = gdf_uncertainty.groupby(gdf_uncertainty.index)[agg_cols].mean()
         # Re-create the GeoDataFrame
@@ -88,7 +88,6 @@ def analyze_uncertainty():
 
     # 6. Plot maps
     plot_uncertainty_map(gdf_uncertainty, 'Uncertainty')
-    plot_uncertainty_map(gdf_uncertainty, 'p_value')
 
     print("--- Uncertainty analysis finished. ---\n")
 
@@ -106,14 +105,8 @@ def plot_uncertainty_map(gdf, column_name):
 
     gdf_proj['plot_value'] = pd.to_numeric(gdf_proj[column_name], errors='coerce')
 
-    # Define color map and value range
-    if column_name == 'Uncertainty':
-        cmap = 'magma'
-        vmin, vmax = np.nanquantile(gdf_proj['plot_value'], [0.01, 0.99]) if not gdf_proj[
-            'plot_value'].dropna().empty else (0, 1)
-    else:  # p_value
-        cmap = 'viridis_r'
-        vmin, vmax = 0, 0.1
+    cmap = 'magma'
+    vmin, vmax = np.nanquantile(gdf_proj['plot_value'], [0.01, 0.99]) if not gdf_proj['plot_value'].dropna().empty else (0, 1)
 
     # Plotting
     fig, ax = plt.subplots(1, 1, figsize=(20, 10))
@@ -126,12 +119,12 @@ def plot_uncertainty_map(gdf, column_name):
     # Plot areas with data on top
     gdf_proj.dropna(subset=['plot_value']).plot(
         column='plot_value', cmap=cmap, linewidth=0, ax=ax,
-        legend=True, legend_kwds={'label': column_name, 'shrink': 0.5},
+        legend=True, legend_kwds={'label': 'Tree dispersion / absolute mean log prediction', 'shrink': 0.5},
         vmin=vmin, vmax=vmax
     )
 
     ax.set_axis_off()
-    ax.set_title(f'Global Map of Prediction {column_name}')
+    ax.set_title('Global Map of Descriptive Tree Dispersion')
 
     # Save outputs
     for fmt in ['pdf', 'png']:

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""R1C5 Fig. 2A global categorical-interaction GLM dumbbell.
+"""Hydrology Fig. 2A global categorical-interaction GLM dumbbell.
 
 The visual grammar follows the original dumbbell style. The statistical
 estimand is changed to a full-sample categorical-interaction GLM:
@@ -38,7 +38,7 @@ DATA_ROOT = Path(os.environ.get("LAKE_MP_DATA_ROOT", REPO_ROOT / "data"))
 TRAIN = Path(os.environ.get("LAKE_MP_TRAIN_DATA", DATA_ROOT / "model_products" / "train_data.csv"))
 OUT_ROOT = Path(os.environ.get("LAKE_MP_OUTPUT_DIR", REPO_ROOT / "outputs")) / "hydrology_gam_and_box_model"
 BASE = OUT_ROOT
-OUT_FIG = BASE / "re_fig" / "R1_5_GLMM调节效应"
+OUT_FIG = BASE / "re_fig" / "Hydrological_moderation"
 OUT_DATA = OUT_ROOT / "data"
 OUT_FIG.mkdir(parents=True, exist_ok=True)
 OUT_DATA.mkdir(parents=True, exist_ok=True)
@@ -365,7 +365,7 @@ def plot_dumbbell_focus_ci(
     ax.set_yticks(y_pos)
     ax.set_yticklabels(df_sorted.index, fontdict={"family": "Arial", "size": 12})
     plt.tight_layout(rect=[0, 0, 0.82, 1])
-    save_pub(fig, f"Fig_R1_5_Dumbbell_{group_by_var}_GLM_originalStyle_categoricalInteraction_stableSigOnlyOrder_v8")
+    save_pub(fig, f"Fig_Hydrology_Dumbbell_{group_by_var}_GLM_originalStyle_categoricalInteraction_stableSigOnlyOrder_v8")
 
 
 def main() -> None:
@@ -381,12 +381,12 @@ def main() -> None:
         all_effects.append(long)
         all_contrasts.append(contrasts)
         all_ranges.append(ranges)
-        long.to_csv(OUT_DATA / f"R1C5_GLM_global_categorical_interaction_effects_{moderator}_v8.csv", index=False, encoding="utf-8-sig")
-        contrasts.to_csv(OUT_DATA / f"R1C5_GLM_global_categorical_interaction_contrasts_{moderator}_v8.csv", index=False, encoding="utf-8-sig")
-        effects.to_csv(OUT_DATA / f"R1C5_GLM_global_categorical_interaction_dumbbell_coefficients_{moderator}_v8.csv", encoding="utf-8-sig")
-        pvals.to_csv(OUT_DATA / f"R1C5_GLM_global_categorical_interaction_dumbbell_pvalues_{moderator}_v8.csv", encoding="utf-8-sig")
-        nonzero.to_csv(OUT_DATA / f"R1C5_GLM_global_categorical_interaction_dumbbell_nonzero_counts_{moderator}_v8.csv", encoding="utf-8-sig")
-        highlight.astype(int).to_csv(OUT_DATA / f"R1C5_GLM_global_categorical_interaction_dumbbell_highlight_mask_{moderator}_v8.csv", encoding="utf-8-sig")
+        long.to_csv(OUT_DATA / f"Hydrology_GLM_global_categorical_interaction_effects_{moderator}_v8.csv", index=False, encoding="utf-8-sig")
+        contrasts.to_csv(OUT_DATA / f"Hydrology_GLM_global_categorical_interaction_contrasts_{moderator}_v8.csv", index=False, encoding="utf-8-sig")
+        effects.to_csv(OUT_DATA / f"Hydrology_GLM_global_categorical_interaction_dumbbell_coefficients_{moderator}_v8.csv", encoding="utf-8-sig")
+        pvals.to_csv(OUT_DATA / f"Hydrology_GLM_global_categorical_interaction_dumbbell_pvalues_{moderator}_v8.csv", encoding="utf-8-sig")
+        nonzero.to_csv(OUT_DATA / f"Hydrology_GLM_global_categorical_interaction_dumbbell_nonzero_counts_{moderator}_v8.csv", encoding="utf-8-sig")
+        highlight.astype(int).to_csv(OUT_DATA / f"Hydrology_GLM_global_categorical_interaction_dumbbell_highlight_mask_{moderator}_v8.csv", encoding="utf-8-sig")
         significant_effects = effects.where(highlight, 0.0)
         order = (
             significant_effects.abs()
@@ -397,7 +397,7 @@ def main() -> None:
             .rename(columns={"index": "Feature"})
         )
         order["plot_rank_ascending"] = np.arange(1, len(order) + 1)
-        order.to_csv(OUT_DATA / f"R1C5_GLM_global_categorical_interaction_dumbbell_stableSigOnly_order_{moderator}_v8.csv", index=False, encoding="utf-8-sig")
+        order.to_csv(OUT_DATA / f"Hydrology_GLM_global_categorical_interaction_dumbbell_stableSigOnly_order_{moderator}_v8.csv", index=False, encoding="utf-8-sig")
         plot_dumbbell_focus_ci(
             effects,
             moderator,
@@ -412,15 +412,15 @@ def main() -> None:
     all_effects_df = pd.concat(all_effects, ignore_index=True)
     all_contrasts_df = pd.concat(all_contrasts, ignore_index=True)
     all_ranges_df = pd.concat(all_ranges, ignore_index=True)
-    all_effects_df.to_csv(OUT_DATA / "R1C5_GLM_global_categorical_interaction_effects_all_v8.csv", index=False, encoding="utf-8-sig")
-    all_contrasts_df.to_csv(OUT_DATA / "R1C5_GLM_global_categorical_interaction_contrasts_all_v8.csv", index=False, encoding="utf-8-sig")
-    all_ranges_df.to_csv(OUT_DATA / "R1C5_GLM_global_categorical_interaction_group_ranges_v8.csv", index=False, encoding="utf-8-sig")
+    all_effects_df.to_csv(OUT_DATA / "Hydrology_GLM_global_categorical_interaction_effects_all_v8.csv", index=False, encoding="utf-8-sig")
+    all_contrasts_df.to_csv(OUT_DATA / "Hydrology_GLM_global_categorical_interaction_contrasts_all_v8.csv", index=False, encoding="utf-8-sig")
+    all_ranges_df.to_csv(OUT_DATA / "Hydrology_GLM_global_categorical_interaction_group_ranges_v8.csv", index=False, encoding="utf-8-sig")
 
     print("Saved v8 categorical-interaction GLM outputs")
-    print(OUT_DATA / "R1C5_GLM_global_categorical_interaction_effects_all_v8.csv")
-    print(OUT_DATA / "R1C5_GLM_global_categorical_interaction_contrasts_all_v8.csv")
-    print(OUT_FIG / "Fig_R1_5_Dumbbell_Res_time_GLM_originalStyle_categoricalInteraction_stableSigOnlyOrder_v8.png")
-    print(OUT_FIG / "Fig_R1_5_Dumbbell_Shore_dev_GLM_originalStyle_categoricalInteraction_stableSigOnlyOrder_v8.png")
+    print(OUT_DATA / "Hydrology_GLM_global_categorical_interaction_effects_all_v8.csv")
+    print(OUT_DATA / "Hydrology_GLM_global_categorical_interaction_contrasts_all_v8.csv")
+    print(OUT_FIG / "Fig_Hydrology_Dumbbell_Res_time_GLM_originalStyle_categoricalInteraction_stableSigOnlyOrder_v8.png")
+    print(OUT_FIG / "Fig_Hydrology_Dumbbell_Shore_dev_GLM_originalStyle_categoricalInteraction_stableSigOnlyOrder_v8.png")
     focus = all_effects_df[all_effects_df["Feature"].eq("fish_gdp_sqkm")]
     print(focus[["Moderator", "Context", "N_group", "Representative_value", "Coefficient", "CI_Lower_95", "CI_Upper_95", "P_value_two_sided_delta", "Effect_percent"]].to_string(index=False))
     print(all_contrasts_df[(all_contrasts_df["Feature"].eq("fish_gdp_sqkm"))][["Moderator", "Contrast", "Estimate", "CI_Lower_95", "CI_Upper_95", "P_value_two_sided"]].to_string(index=False))

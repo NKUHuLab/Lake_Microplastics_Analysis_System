@@ -9,6 +9,9 @@ import os
 import matplotlib.pyplot as plt
 from sklearn.model_selection import ShuffleSplit, permutation_test_score, cross_validate
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.base import clone
+from sklearn.impute import SimpleImputer
+from sklearn.pipeline import make_pipeline
 from sklearn.metrics import mean_squared_error, r2_score
 import config
 
@@ -53,7 +56,9 @@ def train_and_evaluate_final_model():
 
     # 1. Load Data
     data = pd.read_csv(config.TRAIN_DATA_PATH).dropna(subset=[config.TARGET_VARIABLE])
-    X = data[config.MODEL_FEATURES].fillna(data[config.MODEL_FEATURES].median())
+    X_raw = data[config.MODEL_FEATURES].copy()
+    training_medians = X_raw.median()
+    X = X_raw.fillna(training_medians)
     y = data[config.TARGET_VARIABLE]
     print(f"Data loaded: {len(X)} samples, {len(X.columns)} features.")
 
@@ -73,6 +78,8 @@ def train_and_evaluate_final_model():
     # 3. Train Model
     print("\n[INFO] Training the final model...")
     best_model.fit(X, y)
+    best_model.training_feature_medians_ = training_medians
+    validation_model = make_pipeline(SimpleImputer(strategy="median"), clone(best_model))
     print("Model training complete.")
 
     # 4. Overfitting Analysis and Final Evaluation
@@ -80,13 +87,14 @@ def train_and_evaluate_final_model():
     cv_splitter = ShuffleSplit(n_splits=10, test_size=0.2, random_state=config.RANDOM_STATE)
 
     scoring = {'R2': 'r2', 'neg_MSE': 'neg_mean_squared_error'}
-    cv_results = cross_validate(best_model, X, y, cv=cv_splitter, scoring=scoring, n_jobs=-1)
+    cv_results = cross_validate(validation_model, X_raw, y, cv=cv_splitter, scoring=scoring, n_jobs=-1)
 
     full_train_score = best_model.score(X, y)
     mean_cv_r2 = np.mean(cv_results['test_R2'])
     mean_cv_rmse = np.sqrt(-np.mean(cv_results['test_neg_MSE']))
     std_cv_rmse = np.std(np.sqrt(-cv_results['test_neg_MSE']))
-    oob_score = best_model.oob_score_
+    oob_score = best_model.oob_score_ if not X_raw.isna().any().any() else float("nan")
+    # OOB scores after global imputation do not provide fully held-out preprocessing.
 
     print(f"Score on FULL Training Data (R²): {full_train_score:.4f}")
     print(f"Mean Cross-Validation Score (R²): {mean_cv_r2:.4f}")
@@ -99,14 +107,14 @@ def train_and_evaluate_final_model():
     else:
         print("SUCCESS: The gap is small, indicating good generalization.")
 
-    print("\n[INFO] Final Model Performance (10-fold Cross-Validation):")
+    print("\n[INFO] Final Model Performance (10-repeat Random Holdout Validation):")
     print(f"Average R²:   {mean_cv_r2:.4f} (± {np.std(cv_results['test_R2']):.4f})")
     print(f"Average RMSE: {mean_cv_rmse:.4f} (± {std_cv_rmse:.4f})")
 
     # 5. Permutation Test for Model Significance
     print("\n[INFO] Performing Permutation Test to check model significance... (This may take some time)")
     score, permutation_scores, p_value = permutation_test_score(
-        best_model, X, y, n_permutations=100, cv=cv_splitter,
+        validation_model, X_raw, y, n_permutations=100, cv=cv_splitter,
         scoring=config.SCORING_METRIC, n_jobs=-1
     )
 

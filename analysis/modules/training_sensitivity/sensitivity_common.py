@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-审稿人#1 意见#1 — 敏感性分析公共函数
+Training subset sensitivity — 敏感性分析公共函数
 照搬 05_predict_global.py + 06_plot_map.py 逻辑: polygon面染色, NA=#E7E7E7
 """
 
@@ -33,6 +33,7 @@ def subsample_geographic_balance(train_df, min_per_continent=25, frac_per_contin
     """分层比例抽样: 每大洲至少保留min_per_continent个样本(若该洲有≥25个),
     对大洲按frac_per_continent比例抽样, 确保总n≥250 且 各洲均有代表性。
     V2修复: 旧版严格等量抽样导致n仅54, VIF无法可靠计算。"""
+    rng = np.random.default_rng(42)
     continents = train_df['region'].dropna().unique()
     counts = train_df['region'].value_counts()
     idx_list = []
@@ -43,11 +44,11 @@ def subsample_geographic_balance(train_df, min_per_continent=25, frac_per_contin
             n_sample = n_cont  # 小洲全保留
         else:
             n_sample = max(min_per_continent, int(n_cont * frac_per_continent))
-        idx = np.random.choice(train_df[train_df['region'] == cont].index,
+        idx = rng.choice(train_df[train_df['region'] == cont].index,
                                size=n_sample, replace=False)
         idx_list.append(idx)
         summary.append(f'{cont}: {n_cont}→{n_sample}')
-    balanced_idx = np.concatenate(idx_list); np.random.shuffle(balanced_idx)
+    balanced_idx = np.concatenate(idx_list); rng.shuffle(balanced_idx)
     print(f"地理平衡子集 v2 (分层比例): 总计 {len(balanced_idx)} 样本 | {'; '.join(summary)}")
     return balanced_idx
 
@@ -72,19 +73,13 @@ def subsample_exact_mesh_size(train_df, mesh_size_um=333):
     print(f"精确网孔子集 (Mesh Size == {mesh_size_um} μm): {len(idx)} 样本")
     return idx
 
-def reservoir_change_from_mean_predictions(main_predictions, sensitivity_predictions,
-                                           baseline_reservoir=5.52e14):
-    """Apply the existing Table S5 mean-ln scaling convention."""
+def geometric_mean_concentration_change(main_predictions, sensitivity_predictions):
+    """Geometric-mean concentration change only; not a physical reservoir total."""
     main_mean = float(np.mean(np.asarray(main_predictions, dtype=float)))
     sensitivity_mean = float(np.mean(np.asarray(sensitivity_predictions, dtype=float)))
-    relative_change = float(np.exp(sensitivity_mean - main_mean) - 1.0)
-    return {
-        'main_mean_ln': main_mean,
-        'sensitivity_mean_ln': sensitivity_mean,
-        'relative_change': relative_change,
-        'percent_change': relative_change * 100.0,
-        'scaled_reservoir': float(baseline_reservoir * (1.0 + relative_change)),
-    }
+    relative_change = float(np.exp(sensitivity_mean-main_mean)-1.0)
+    return dict(main_mean_ln=main_mean, sensitivity_mean_ln=sensitivity_mean,
+                relative_change=relative_change, percent_change=100.0*relative_change)
 
 # === RF训练 ===
 def train_rf_subsample(X, y, random_state=42):
@@ -94,7 +89,11 @@ def train_rf_subsample(X, y, random_state=42):
         min_samples_leaf=1, min_samples_split=10, n_estimators=500,
         random_state=random_state, n_jobs=-1, oob_score=True
     )
+    # Preserve training-only imputation for later prediction.
+    medians = np.nanmedian(np.asarray(X, dtype=float), axis=0)
+    X = np.where(np.isnan(np.asarray(X, dtype=float)), medians, X)
     model.fit(X, y)
+    model.training_feature_medians_ = pd.Series(medians, index=FEATURE_LIST)
     print(f"  RF: OOB R2={model.oob_score_:.4f}")
     return model
 
@@ -154,7 +153,7 @@ def predict_and_save_shp(model, output_shp_path, feature_csv_path=None):
     geo_df = gpd.read_file(BASE_SHP)
 
     X_predict = features_df[FEATURE_LIST].copy()
-    X_predict.fillna(X_predict.median(), inplace=True)
+    X_predict = X_predict.fillna(model.training_feature_medians_)
 
     print(f"  预测 {len(features_df)} 数据点...")
     features_df['prediction'] = model.predict(X_predict)
@@ -183,11 +182,12 @@ def predict_and_save_shp(model, output_shp_path, feature_csv_path=None):
     return merged_gdf, features_df
 
 # === 储量CI ===
-def compute_reservoir_ci_from_model(model, feature_csv_path=None):
+def compute_concentration_sum_tree_spread(model, feature_csv_path=None):
+    """Unweighted concentration sum and tree-resampling range; not total stock or a sampling CI."""
     if feature_csv_path is None: feature_csv_path = PREDICT_CSV
     features_df = pd.read_csv(feature_csv_path)
     features_df.columns = features_df.columns.str.strip()
-    X = features_df[FEATURE_LIST].copy().fillna(features_df[FEATURE_LIST].median())
+    X = features_df[FEATURE_LIST].copy().fillna(model.training_feature_medians_)
     tree_preds = np.array([tree.predict(X.values) for tree in model.estimators_])
     n_trees, n_lakes = tree_preds.shape
     per_lake_mean = tree_preds.mean(axis=0)
@@ -196,7 +196,7 @@ def compute_reservoir_ci_from_model(model, feature_csv_path=None):
     R_bootstrap = [np.exp(tree_preds[rng.choice(n_trees, size=n_trees, replace=True), :].mean(axis=0)).sum()
                    for _ in range(1000)]
     ci_low, ci_high = np.percentile(R_bootstrap, [2.5, 97.5])
-    print(f"  储量: {R_point:.2e} [{ci_low:.2e}, {ci_high:.2e}]")
+    print(f"  Unweighted concentration sum and tree-resampling range: {R_point:.2e} [{ci_low:.2e}, {ci_high:.2e}]")
     return R_point, ci_low, ci_high, per_lake_mean
 
 # === 缓存 ===

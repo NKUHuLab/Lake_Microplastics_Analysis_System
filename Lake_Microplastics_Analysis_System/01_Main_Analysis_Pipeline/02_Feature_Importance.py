@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import os
 import warnings
 from sklearn.inspection import permutation_importance
-from code import config
+import config
 
 warnings.filterwarnings("ignore")
 plt.rcParams.update(config.PLT_RC_PARAMS)

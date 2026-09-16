@@ -12,7 +12,7 @@ DATA_ROOT <- Sys.getenv("LAKE_MP_DATA_ROOT", file.path(ROOT, "data"))
 OUTPUT_DIR <- Sys.getenv("LAKE_MP_OUTPUT_DIR", file.path(ROOT, "outputs"))
 data_dir <- file.path(OUTPUT_DIR, "biota_zinb_and_traits", "data")
 input_path <- file.path(DATA_ROOT, "evidence", "biota_zinb_and_traits", "Supplementary_Data_2_WITH_PRED_MP.xlsx")
-trait_path <- file.path(DATA_ROOT, "evidence", "biota", "R1C10_fish_trait_metadata_v1.csv")
+trait_path <- file.path(DATA_ROOT, "evidence", "biota", "TrophicControls_fish_trait_metadata_v1.csv")
 
 stopifnot(file.exists(input_path), file.exists(trait_path))
 
@@ -283,12 +283,12 @@ complete_cases <- model_data %>%
     Trait_Version
   )
 
-write_csv(model_summary, file.path(data_dir, "R1C10_independent_trait_model_summary_v1.csv"), na = "")
-write_csv(complete_cases, file.path(data_dir, "R1C10_independent_trait_complete_cases_v1.csv"), na = "")
-write_csv(coefficient_table, file.path(data_dir, "R1C10_independent_trait_coefficients_v1.csv"), na = "")
-write_csv(diagnostics, file.path(data_dir, "R1C10_independent_trait_diagnostics_v1.csv"), na = "")
-write_csv(vif_table, file.path(data_dir, "R1C10_independent_trait_vif_v1.csv"), na = "")
-saveRDS(lapply(fits, `[[`, "model"), file.path(data_dir, "R1C10_independent_trait_models_v1.rds"))
+write_csv(model_summary, file.path(data_dir, "TrophicControls_independent_trait_model_summary_v1.csv"), na = "")
+write_csv(complete_cases, file.path(data_dir, "TrophicControls_independent_trait_complete_cases_v1.csv"), na = "")
+write_csv(coefficient_table, file.path(data_dir, "TrophicControls_independent_trait_coefficients_v1.csv"), na = "")
+write_csv(diagnostics, file.path(data_dir, "TrophicControls_independent_trait_diagnostics_v1.csv"), na = "")
+write_csv(vif_table, file.path(data_dir, "TrophicControls_independent_trait_vif_v1.csv"), na = "")
+saveRDS(lapply(fits, `[[`, "model"), file.path(data_dir, "TrophicControls_independent_trait_models_v1.rds"))
 
 print(model_summary %>% select(Model, Response, N, N_Studies, TL_beta, TL_CI_low, TL_CI_high, TL_p, AIC))
 print(diagnostics)

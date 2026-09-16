@@ -9,7 +9,7 @@ This snapshot contains only selected evidence, selected model products and the c
 - `evidence/Cost_evidence.csv`: 106 curated source-linked cost records. Currency, unit, scope and recorded verification detail are retained. This is not a harmonized global price schedule; some verification is inherited from earlier source extraction.
 - `evidence/Implementation_and_related_timing.csv`: 21 source-linked timing records, including implementation, service-life, policy and related response timings. Use the recorded category and context; they are not all construction durations or newly rechecked source values.
 - `evidence/Pathway_source_checked_subset.csv`: 27 documented source-checked examples. The large automatic numeric-token extraction table is excluded because text matches alone do not establish quantity validity.
-- [R1C4 numerical inputs](../analysis/revision/r1c4/data/numeric_inputs.csv): all 185 inputs actually used in the final scenario calculation, kept complete for reproducibility. Their verification fields distinguish admitted inputs from primary-source rechecks; do not describe the entire file as independently PDF-verified.
+- [PathwayAttribution numerical inputs](../analysis/modules/pathway_attribution/data/numeric_inputs.csv): all 185 inputs actually used in the final scenario calculation, kept complete for reproducibility. Their verification fields distinguish admitted inputs from primary-source rechecks; do not describe the entire file as independently PDF-verified.
 
 ## Model products and spatial data
 
@@ -24,3 +24,9 @@ For the SHP, selection starts with the existing High class, excludes entire lake
 The software MIT license does not license third-party data. Source titles, URLs, units and verification scopes in the evidence tables remain part of the data and should accompany reuse. Source publications retain copyright in quoted source-context excerpts; consult the cited publications for reuse beyond the supplied factual records.
 
 OSM-derived data are © OpenStreetMap contributors and subject to [ODbL](https://www.openstreetmap.org/copyright). HydroLAKES geometry is distributed under [CC BY 4.0](https://www.hydrosheds.org/products/hydrolakes); cite [Messager et al. (2016)](https://doi.org/10.1038/ncomms13603). Derived exposure attributes acknowledge the IUCN Red List and retain applicable non-commercial/source conditions; consult the [IUCN data conditions and FAQ](https://nrl.iucnredlist.org/about/faqs). Raw IUCN range polygons are not redistributed, and no IUCN endorsement is implied. The combined SHP must be reused subject to the conditions of both its geometry and its derived exposure attributes.
+
+## Statistical-field correction
+
+The former `uncertainty_p_value` CSV column and `unc_pval` SHP attribute have been removed. A t test treating trees in one random forest as independent samples is not a valid per-lake significance test. All retained prediction, reliability, exposure and geometry values are unchanged. The `uncertainty_cv` / `unc_cv` values describe tree dispersion relative to the absolute mean log prediction; they are not sampling confidence intervals. The High class is a heuristic ranking that combines normalized novelty and tree dispersion with equal weights and an upper-quartile threshold; it is not a calibrated probability of correctness.
+
+For the pathway record PATH-10661, the restored unit is `kg/ha`; the retained 50–260 kg/ha range converts to 5–26 g/m2. The `original_unit` field preserves the original extraction transcription, while `restored_unit` and `unit` describe the interpreted and converted units used in analysis.

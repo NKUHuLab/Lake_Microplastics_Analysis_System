@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-"""Pre-check R1C5 high-RT evidence using bootstrap/permutation and marginal effects.
+"""Pre-check Hydrology high-RT evidence using bootstrap/permutation and marginal effects.
 
-This script keeps the same variable transformation as the R1C5 v4 figure code:
+This script keeps the same variable transformation as the Hydrology v4 figure code:
 Gaussian linear model on ln(MP), log1p for skewed variables, z-standardized
 predictors, and HC3 covariance for Wald tests.
 """
@@ -267,7 +267,7 @@ def write_docx(rows: pd.DataFrame) -> Path:
     from docx.oxml.ns import qn
     from docx.shared import Inches, Pt
 
-    out = OUT / "R1C5_marginal_bootstrap_permutation_precheck.docx"
+    out = OUT / "Hydrology_marginal_bootstrap_permutation_precheck.docx"
     doc = Document()
     sec = doc.sections[0]
     sec.orientation = WD_ORIENT.LANDSCAPE
@@ -320,7 +320,7 @@ def write_docx(rows: pd.DataFrame) -> Path:
     def fmtp(x):
         return "<0.001" if x < 0.001 else f"{x:.3f}"
 
-    add_p("R1C5 preliminary significance checks for long-residence fishery effect", bold=True)
+    add_p("Hydrology preliminary significance checks for long-residence fishery effect", bold=True)
     headers = ["Analysis", "RT condition", "N", "Estimate", "Delta 95% CI", "Delta p", "Bootstrap 95% CI", "Perm. p"]
     table = doc.add_table(rows=1, cols=len(headers))
     table.alignment = WD_TABLE_ALIGNMENT.CENTER
@@ -353,7 +353,7 @@ def main():
     df = load_data()
     rows = [high_rt_stratified(df)] + global_marginal_effects(df)
     out = pd.DataFrame(rows)
-    csv = OUT / "R1C5_marginal_bootstrap_permutation_precheck.csv"
+    csv = OUT / "Hydrology_marginal_bootstrap_permutation_precheck.csv"
     out.to_csv(csv, index=False, encoding="utf-8-sig")
     docx = write_docx(out)
     print(f"Saved CSV: {csv}")

@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-"""R1C5 Fig. 2 rebuild: original visuals, revised GLM/GAM internals.
+"""Hydrology Fig. 2 rebuild: original visuals, revised GLM/GAM internals.
 
 This script intentionally preserves the visual grammar of the manuscript code:
 - 18_advanced_meta_analysis.py: dumbbell plot with black rods and three colored dots.
 - 19_quantify_effects.py: faceted predictor-response plots stratified by moderator.
 
-The statistical internals are revised for the reviewer request:
+The statistical internals are revised for the analysis specification:
 - subgroup and global moderation coefficients use Gaussian GLM on ln(MP) with
   HC3 robust standard errors, 95% CIs and p values;
 - linear response lines are replaced by GAM smooths with 95% CIs.
@@ -34,7 +34,7 @@ CODE_DIR = Path(os.environ.get("LAKE_MP_GAM_HELPERS_DIR", Path(__file__).resolve
 if str(CODE_DIR) not in sys.path:
     sys.path.insert(0, str(CODE_DIR))
 
-from r1c5_glm_gam_helpers import (  # noqa: E402
+from hydrology_glm_gam_helpers import (  # noqa: E402
     PREDICTORS,
     MODERATORS,
     fit_subgroup_glm_hc3,
@@ -49,7 +49,7 @@ BASE = Path(__file__).resolve().parents[2]
 TRAIN = Path(os.environ.get("LAKE_MP_TRAIN_DATA", DATA_ROOT / "model_products" / "train_data.csv"))
 OUT_ROOT = Path(os.environ.get("LAKE_MP_OUTPUT_DIR", REPO_ROOT / "outputs")) / "hydrology_gam_and_box_model"
 BASE = OUT_ROOT
-OUT_FIG = BASE / "re_fig" / "R1_5_GLMM调节效应"
+OUT_FIG = BASE / "re_fig" / "Hydrological_moderation"
 OUT_DATA = OUT_ROOT / "data"
 OUT_FIG.mkdir(parents=True, exist_ok=True)
 OUT_DATA.mkdir(parents=True, exist_ok=True)
@@ -197,7 +197,7 @@ def plot_dumbbell_original_style(
     ax.set_yticks(y_pos)
     ax.set_yticklabels(df_sorted.index, fontdict={"family": "Arial", "size": 12})
     plt.tight_layout(rect=[0, 0, 0.9, 1])
-    save_pub(fig, f"Fig_R1_5_Dumbbell_{group_by_var}_GLM_originalStyle_{suffix}")
+    save_pub(fig, f"Fig_Hydrology_Dumbbell_{group_by_var}_GLM_originalStyle_{suffix}")
 
 
 def plot_dumbbell_focus_ci(
@@ -344,7 +344,7 @@ def plot_dumbbell_focus_ci(
             va="top",
         )
     plt.tight_layout(rect=[0, 0.04, 0.82, 1])
-    save_pub(fig, f"Fig_R1_5_Dumbbell_{group_by_var}_GLM_originalStyle_{suffix}")
+    save_pub(fig, f"Fig_Hydrology_Dumbbell_{group_by_var}_GLM_originalStyle_{suffix}")
 
 
 def make_dumbbell_outputs(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -386,13 +386,13 @@ def make_dumbbell_outputs(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]
             )
             max_abs_order_table["plot_rank_ascending"] = np.arange(1, len(max_abs_order_table) + 1)
             max_abs_order_table.to_csv(
-                OUT_DATA / f"R1C5_GLM_originalStyle_dumbbell_maxAbs_order_{moderator}.csv",
+                OUT_DATA / f"Hydrology_GLM_originalStyle_dumbbell_maxAbs_order_{moderator}.csv",
                 index=False,
                 encoding="utf-8-sig",
             )
             max_abs_order = max_abs_order_table["Feature"].tolist()
             comparison_df.to_csv(
-                OUT_DATA / f"R1C5_GLM_originalStyle_dumbbell_coefficients_{moderator}.csv",
+                OUT_DATA / f"Hydrology_GLM_originalStyle_dumbbell_coefficients_{moderator}.csv",
                 encoding="utf-8-sig",
             )
             if moderator in DUMBBELL_PLOT_MODERATORS:
@@ -416,10 +416,10 @@ def make_dumbbell_outputs(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]
     diag_out = pd.DataFrame(all_diag)
     vif_out = pd.concat(all_vif, ignore_index=True)
 
-    subgroup_out.to_csv(OUT_DATA / "R1C5_GLM_subgroup_coefficients_originalStyle_v4.csv", index=False, encoding="utf-8-sig")
-    global_out.to_csv(OUT_DATA / "R1C5_GLM_global_moderation_coefficients_originalStyle_v4.csv", index=False, encoding="utf-8-sig")
-    diag_out.to_csv(OUT_DATA / "R1C5_GLM_model_diagnostics_originalStyle_v4.csv", index=False, encoding="utf-8-sig")
-    vif_out.to_csv(OUT_DATA / "R1C5_GLM_vif_originalStyle_v4.csv", index=False, encoding="utf-8-sig")
+    subgroup_out.to_csv(OUT_DATA / "Hydrology_GLM_subgroup_coefficients_originalStyle_v4.csv", index=False, encoding="utf-8-sig")
+    global_out.to_csv(OUT_DATA / "Hydrology_GLM_global_moderation_coefficients_originalStyle_v4.csv", index=False, encoding="utf-8-sig")
+    diag_out.to_csv(OUT_DATA / "Hydrology_GLM_model_diagnostics_originalStyle_v4.csv", index=False, encoding="utf-8-sig")
+    vif_out.to_csv(OUT_DATA / "Hydrology_GLM_vif_originalStyle_v4.csv", index=False, encoding="utf-8-sig")
     return global_out, diag_out
 
 
@@ -458,9 +458,9 @@ def make_gam_fishery_rt(df: pd.DataFrame) -> pd.DataFrame:
 
     fig.suptitle("Nonlinear: Fishery GDP vs MP Abundance (GAM, 95% CI)", fontsize=10.5, fontweight="bold", y=1.02)
     plt.tight_layout()
-    save_pub(fig, "Fig_R1_5_GAM_Nonlinear_v4")
+    save_pub(fig, "Fig_Hydrology_GAM_Nonlinear_v4")
     out = pd.DataFrame(rows)
-    out.to_csv(OUT_DATA / "R1C5_GAM_fishery_RT_model_summary_v4.csv", index=False, encoding="utf-8-sig")
+    out.to_csv(OUT_DATA / "Hydrology_GAM_fishery_RT_model_summary_v4.csv", index=False, encoding="utf-8-sig")
     return out
 
 
@@ -506,7 +506,7 @@ def make_gam_interaction_grids(df: pd.DataFrame) -> None:
         fig.legend(handles[:3], labels[:3], title=f"{mod_var} level", loc="upper right", bbox_to_anchor=(0.98, 0.92))
         fig.suptitle(f"Interaction Effects Moderated by {MOD_LABELS.get(mod_var, mod_var)} (GAM smooth)", y=1.03, fontsize=22)
         plt.tight_layout(rect=[0, 0, 0.95, 1])
-        save_pub(fig, f"Fig_R1_5_19_GAM_interaction_by_{mod_var}_v4")
+        save_pub(fig, f"Fig_Hydrology_19_GAM_interaction_by_{mod_var}_v4")
 
 
 def make_three_line_docx(global_out: pd.DataFrame, diag_out: pd.DataFrame) -> None:
@@ -517,7 +517,7 @@ def make_three_line_docx(global_out: pd.DataFrame, diag_out: pd.DataFrame) -> No
     from docx.oxml.ns import qn
     from docx.shared import Pt
 
-    out = OUT_DATA / "R1C5_GLM_moderation_three_line_table_originalStyle_v4.docx"
+    out = OUT_DATA / "Hydrology_GLM_moderation_three_line_table_originalStyle_v4.docx"
     doc = Document()
     style = doc.styles["Normal"]
     style.font.name = "Times New Roman"
@@ -560,7 +560,7 @@ def make_three_line_docx(global_out: pd.DataFrame, diag_out: pd.DataFrame) -> No
         r._element.rPr.rFonts.set(qn("w:eastAsia"), "Times New Roman")
         r.font.size = Pt(12)
 
-    add_p("Table R1C5-S2. Moderation model output for residence-time amplification.", True)
+    add_p("Table Hydrology-S2. Moderation model output for residence-time amplification.", True)
     keep_terms = [
         "fish_gdp_sqkm",
         "Res_time",
@@ -596,7 +596,7 @@ def make_three_line_docx(global_out: pd.DataFrame, diag_out: pd.DataFrame) -> No
     add_p("Note: The primary inferential model is a Gaussian GLM on ln(MP abundance), matching the original response scale. HC3 robust standard errors are used for 95% confidence intervals and p values. A GLMM was not used because the training table does not contain a study, country, campaign, lake, or site identifier for a defensible random-effect structure.")
     add_p("Residence-time source: HydroLAKES v1.0 hydraulic residence time, calculated as lake volume divided by outflow (RT = V/Qout), was used as the hydrological moderator.")
 
-    add_p("Table R1C5-S3. Diagnostics for global moderation models.", True)
+    add_p("Table Hydrology-S3. Diagnostics for global moderation models.", True)
     dtable = doc.add_table(rows=1, cols=6)
     dtable.alignment = WD_TABLE_ALIGNMENT.CENTER
     for i, h in enumerate(["Moderator", "N", "AIC", "R2", "RMSE", "df"]):

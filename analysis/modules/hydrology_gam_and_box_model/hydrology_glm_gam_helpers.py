@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Reusable GLM/GAM helpers for the R1C5 Fig. 2 revision.
+"""Reusable GLM/GAM helpers for the Hydrology Fig. 2 revision.
 
 The plotting scripts keep their original visual grammar. This module only
 replaces ridge/linear-regression internals with inferential models that provide

@@ -5,9 +5,11 @@ import numpy as np
 import warnings
 from sklearn.model_selection import ShuffleSplit
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.impute import SimpleImputer
+from sklearn.pipeline import make_pipeline
 from sklearn.metrics import mean_squared_error, r2_score
 from tqdm import tqdm
-from code import config
+import config
 
 warnings.filterwarnings("ignore")
 
@@ -21,10 +23,10 @@ def evaluate_metrics(y_true, y_pred):
 
 def perform_rf_cross_validation():
     """
-    Performs a 10-fold cross-validation on the training data using the
+    Performs a 10-repeat random holdout cross-validation on the training data using the
     final RandomForest model's configuration.
     """
-    print("--- Starting 10-Fold Cross-Validation for RandomForest Model ---")
+    print("--- Starting 10-Repeat Random Holdout Cross-Validation for RandomForest Model ---")
 
     # 1. Load data
     try:
@@ -34,25 +36,22 @@ def perform_rf_cross_validation():
         print(f"Error: Could not load training data. Please check the path in config.py. Error: {e}")
         return
 
-    X = data[config.MODEL_FEATURES].fillna(data[config.MODEL_FEATURES].median())
+    X = data[config.MODEL_FEATURES].copy()
     y = data[config.TARGET_VARIABLE]
 
     # 2. Define the model with the same hyperparameters as the final trained model
     # Note: Cross-validation re-trains the model on each fold.
     # We define the model architecture here, we do not load the .pkl file.
-    model = RandomForestRegressor(
-        n_estimators=200,
-        max_depth=15,
-        min_samples_leaf=3,
-        max_features='sqrt',
-        random_state=config.RANDOM_STATE,
-        n_jobs=-1
-    )
+    model = make_pipeline(SimpleImputer(strategy="median"), RandomForestRegressor(
+        bootstrap=True, max_depth=10, max_features=0.5,
+        min_samples_leaf=1, min_samples_split=10, n_estimators=500,
+        random_state=config.RANDOM_STATE, n_jobs=-1
+    ))
     print("RandomForest model configured for cross-validation.")
 
-    # 3. Set up the 10-fold cross-validation
+    # 3. Set up the 10-repeat random holdout cross-validation
     cv_splitter = ShuffleSplit(n_splits=10, test_size=0.2, random_state=config.RANDOM_STATE)
-    print(f"Using ShuffleSplit for {cv_splitter.get_n_splits()}-fold cross-validation.")
+    print(f"Using ShuffleSplit for {cv_splitter.get_n_splits()} random holdout repetitions.")
 
     # 4. Perform cross-validation and collect metrics
     metrics_list = []
@@ -92,11 +91,11 @@ if __name__ == '__main__':
     # Ensure config.py can be found if running as a script
     # This might need adjustment based on your project structure
     try:
-        from code import config
+        import config
     except ImportError:
         import sys
         # Assuming the script is run from the project root
         sys.path.append('.')
-        from code import config
+        import config
 
     perform_rf_cross_validation()

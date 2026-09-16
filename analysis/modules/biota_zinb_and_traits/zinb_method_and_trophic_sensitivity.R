@@ -1,10 +1,10 @@
 # ============================================================================
-# R1C7/R1C10 visual revision v4
+# IngestionMethods/TrophicControls visual revision v4
 # Purpose:
-#   1) Replace R1C7b heatmap/bubble with an information-dense zero-rate forest.
-#   2) Merge R1C7c and R1C10b into one table-style forest plot.
-#   3) Drop R1C7d from the main evidence set.
-#   4) Add habitat-resolved biodilution plot for R1C10.
+#   1) Replace IngestionMethodsb heatmap/bubble with an information-dense zero-rate forest.
+#   2) Merge IngestionMethodsc and TrophicControlsb into one table-style forest plot.
+#   3) Drop IngestionMethodsd from the main evidence set.
+#   4) Add habitat-resolved biodilution plot for TrophicControls.
 #   5) Add core-cluster diagnostics, items/ind contrast, leave-one-study-out
 #      influence analysis, and trophic-level uncertainty stress tests.
 # ============================================================================
@@ -303,7 +303,7 @@ df10 <- df10_raw %>%
     TL_s = as.numeric(scale(TL))
   )
 
-model_rows <- read_csv(file.path(DIR_DATA, "R1C7_R1C10_model_summary_v2.csv"), show_col_types = FALSE) %>%
+model_rows <- read_csv(file.path(DIR_DATA, "IngestionMethods_TrophicControls_model_summary_v2.csv"), show_col_types = FALSE) %>%
   distinct(Model, .keep_all = TRUE)
 
 primary_fit <- fit_tl_model(df10, "MP_g")
@@ -312,7 +312,7 @@ ind_fit <- fit_tl_model(df10, "MP_ind")
 pred_ind <- predict_tl(ind_fit)
 
 # ---------------------------------------------------------------------------
-# Fig R1C7b v4: detection-limit zero-rate forest
+# Fig IngestionMethodsb v4: detection-limit zero-rate forest
 # ---------------------------------------------------------------------------
 spearman_zero <- suppressWarnings(cor(log10(df$Target_Size_Lower_Limit_um + 1), as.numeric(df$Zero_g),
                                       method = "spearman", use = "complete.obs"))
@@ -365,7 +365,7 @@ write_csv(
       Wilson_95CI_low = lo,
       Wilson_95CI_high = hi
     ),
-  file.path(DIR_DATA, "R1C7_detection_zero_rate_v4.csv")
+  file.path(DIR_DATA, "IngestionMethods_detection_zero_rate_v4.csv")
 )
 
 overall_zero <- mean(df$Zero_g, na.rm = TRUE)
@@ -395,7 +395,7 @@ p_zero_rate <- ggplot(zero_rate_rows, aes(y = Row)) +
                                "Lower sensitivity (>=50 um)" = "#E0A46C"),
                     name = "Detection window") +
   labs(
-    title = "R1C7b | Zero-rate diagnostic by method and detection window",
+    title = "IngestionMethodsb | Zero-rate diagnostic by method and detection window",
     subtitle = sprintf("Points show zero proportion with Wilson 95%% CI; dotted line is the overall zero rate (%.1f%%), Spearman rho=%.2f",
                        100 * overall_zero, spearman_zero),
     x = "Zero proportion for mass-normalized abundance",
@@ -411,21 +411,21 @@ p_zero_rate <- ggplot(zero_rate_rows, aes(y = Row)) +
     panel.grid.minor = element_blank(),
     plot.margin = margin(10, 14, 8, 10)
   )
-save_panel(p_zero_rate, "Fig_R1C7b_detection_zero_rate_v4", 8.8, 5.8)
+save_panel(p_zero_rate, "Fig_IngestionMethodsb_detection_zero_rate_v4", 8.8, 5.8)
 
 # ---------------------------------------------------------------------------
-# Fig R1C7c/R1C10b v4: integrated table-style forest plot
+# Fig IngestionMethodsc/TrophicControlsb v4: integrated table-style forest plot
 # ---------------------------------------------------------------------------
 forest_models <- tribble(
   ~Group, ~Model, ~Display, ~Data_set, ~Scope,
-  "R1C7 method and detection controls", "R1C7/R1C10 primary items/g", "Primary base model", "Full items/g", "Full-data model",
-  "R1C7 method and detection controls", "R1C7 method-adjusted", "+ method covariate", "Full items/g", "Full-data covariate control",
-  "R1C7 method and detection controls", "R1C7 detection-adjusted", "+ detection-limit covariate", "Full items/g", "Full-data covariate control",
-  "R1C7 method and detection controls", "R1C7 KOH-only", "KOH-only stratum", "KOH subset", "Method-stratified subset",
-  "R1C7 method and detection controls", "R1C7 H2O2-only", "H2O2-only stratum", "H2O2 subset", "Method-stratified subset",
-  "R1C10 biological and scale controls", "R1C10 tissue-adjusted", "+ tissue covariate", "Full items/g", "Full-data covariate control",
-  "R1C10 biological and scale controls", "R1C10 dominant methods", "Dominant KOH+H2O2", "KOH+H2O2 subset", "Dominant-method subset",
-  "R1C10 biological and scale controls", "R1C10 items/ind contrast", "Items/ind response", "Full items/ind", "Alternative normalization",
+  "IngestionMethods method and detection controls", "IngestionMethods/TrophicControls primary items/g", "Primary base model", "Full items/g", "Full-data model",
+  "IngestionMethods method and detection controls", "IngestionMethods method-adjusted", "+ method covariate", "Full items/g", "Full-data covariate control",
+  "IngestionMethods method and detection controls", "IngestionMethods detection-adjusted", "+ detection-limit covariate", "Full items/g", "Full-data covariate control",
+  "IngestionMethods method and detection controls", "IngestionMethods KOH-only", "KOH-only stratum", "KOH subset", "Method-stratified subset",
+  "IngestionMethods method and detection controls", "IngestionMethods H2O2-only", "H2O2-only stratum", "H2O2 subset", "Method-stratified subset",
+  "TrophicControls biological and scale controls", "TrophicControls tissue-adjusted", "+ tissue covariate", "Full items/g", "Full-data covariate control",
+  "TrophicControls biological and scale controls", "TrophicControls dominant methods", "Dominant KOH+H2O2", "KOH+H2O2 subset", "Dominant-method subset",
+  "TrophicControls biological and scale controls", "TrophicControls items/ind contrast", "Items/ind response", "Full items/ind", "Alternative normalization",
   "Sparse-taxon sensitivity", "Family n >= 2", "Family n >= 2", "Family subset", "Sparse-taxon subset",
   "Sparse-taxon sensitivity", "Family n >= 3", "Family n >= 3", "Family subset", "Sparse-taxon subset",
   "Sparse-taxon sensitivity", "Family n >= 4", "Family n >= 4", "Family subset", "Sparse-taxon subset"
@@ -434,14 +434,14 @@ forest_models <- tribble(
 forest_df <- forest_models %>%
   left_join(model_rows, by = "Model") %>%
   mutate(
-    Group = factor(Group, levels = c("R1C7 method and detection controls",
-                                     "R1C10 biological and scale controls",
+    Group = factor(Group, levels = c("IngestionMethods method and detection controls",
+                                     "TrophicControls biological and scale controls",
                                      "Sparse-taxon sensitivity")),
     Display = factor(Display, levels = rev(Display)),
     Row_base = rev(row_number()) * 0.62,
     Row = Row_base + case_when(
-      Group == "R1C7 method and detection controls" ~ 0.74,
-      Group == "R1C10 biological and scale controls" ~ 0.37,
+      Group == "IngestionMethods method and detection controls" ~ 0.74,
+      Group == "TrophicControls biological and scale controls" ~ 0.37,
       TRUE ~ 0
     ),
     CI_label = format_ci(TL_beta, TL_CI_low, TL_CI_high),
@@ -495,7 +495,7 @@ write_csv(
       P_label,
       Significant_negative = Sig
     ),
-  file.path(DIR_DATA, "R1C7_R1C10_integrated_forest_v4.csv")
+  file.path(DIR_DATA, "IngestionMethods_TrophicControls_integrated_forest_v4.csv")
 )
 
 row_shades <- forest_df %>%
@@ -558,7 +558,7 @@ p_forest <- ggplot(forest_df, aes(y = Row)) +
                      guide = guide_axis(cap = TRUE)) +
   scale_y_continuous(limits = c(0.34, max(forest_df$Row) + 0.94), breaks = NULL) +
   labs(
-    title = "R1C7/R1C10 | Method controls and biodilution robustness",
+    title = "IngestionMethods/TrophicControls | Method controls and biodilution robustness",
     subtitle = "Full-data covariate controls retain N=120; subset rows explicitly reduce N. Negative beta supports mass-normalized biodilution.",
     x = "Trophic-level coefficient (standardized beta)",
     y = NULL
@@ -573,10 +573,10 @@ p_forest <- ggplot(forest_df, aes(y = Row)) +
     panel.grid.minor = element_blank(),
     plot.margin = margin(6, 10, 6, 8)
   )
-save_panel(p_forest, "Fig_R1C7c_R1C10b_integrated_forest_v4", 9.8, 4.0)
+save_panel(p_forest, "Fig_IngestionMethodsc_TrophicControlsb_integrated_forest_v4", 9.8, 4.0)
 
 # ---------------------------------------------------------------------------
-# Fig R1C10a/b v4: core clustering for items/g and items/ind
+# Fig TrophicControlsa/b v4: core clustering for items/g and items/ind
 # ---------------------------------------------------------------------------
 clean_mp_label <- function(x) {
   case_when(
@@ -769,24 +769,24 @@ plot_core_cluster <- function(fit, pred, response_col, title, subtitle, y_label,
 
 core_g <- plot_core_cluster(
   primary_fit, pred_primary, "MP_g",
-  "R1C10a | Core clustering of mass-normalized ingestion",
+  "TrophicControlsa | Core clustering of mass-normalized ingestion",
   "Core outlines enclose the densest 50% of each displayed group; labels report the enclosed share of that group",
   "Measured MP abundance (items/g; pseudo-log scale)",
-  "R1C10_core_cluster_items_g_v4.csv",
-  "Fig_R1C10a_items_g_core_cluster_v4"
+  "TrophicControls_core_cluster_items_g_v4.csv",
+  "Fig_TrophicControlsa_items_g_core_cluster_v4"
 )
 
 core_ind <- plot_core_cluster(
   ind_fit, pred_ind, "MP_ind",
-  "R1C10b | Core clustering of individual-normalized ingestion",
+  "TrophicControlsb | Core clustering of individual-normalized ingestion",
   "Items/ind is shown as a scale contrast; the TL trend is weak while group clustering remains visible",
   "Measured MP abundance (items/ind; pseudo-log scale)",
-  "R1C10_core_cluster_items_ind_v4.csv",
-  "Fig_R1C10b_items_ind_core_cluster_v4"
+  "TrophicControls_core_cluster_items_ind_v4.csv",
+  "Fig_TrophicControlsb_items_ind_core_cluster_v4"
 )
 
 # ---------------------------------------------------------------------------
-# Fig R1C10c v4: leave-one-study-out ZINB influence analysis
+# Fig TrophicControlsc v4: leave-one-study-out ZINB influence analysis
 # ---------------------------------------------------------------------------
 full_tl <- primary_fit$row %>%
   transmute(
@@ -876,9 +876,9 @@ write_csv(
       Major_method, Major_habitat, Kept_N, Kept_Studies, TL_beta, TL_SE, TL_z, TL_p,
       TL_CI_low, TL_CI_high, Delta_beta, Abs_delta_beta, Significant_negative, Negative
     ),
-  file.path(DIR_DATA, "R1C10_study_jackknife_influence_v4.csv")
+  file.path(DIR_DATA, "TrophicControls_study_jackknife_influence_v4.csv")
 )
-write_csv(jack_summary, file.path(DIR_DATA, "R1C10_study_jackknife_summary_v4.csv"))
+write_csv(jack_summary, file.path(DIR_DATA, "TrophicControls_study_jackknife_summary_v4.csv"))
 
 jack_axis_min <- min(-0.58, min(jackknife$TL_beta, full_beta, na.rm = TRUE) - 0.035)
 jack_axis_max <- 0.02
@@ -938,7 +938,7 @@ p_jackknife <- ggplot(jack_capsule, aes(x = TL_beta, y = Strip_y)) +
                      guide = guide_axis(cap = TRUE)) +
   scale_y_continuous(limits = c(-0.105, 0.130), breaks = NULL) +
   labs(
-    title = "R1C10c | Study-jackknife stability capsule",
+    title = "TrophicControlsc | Study-jackknife stability capsule",
     subtitle = sprintf("24/24 beta<0; %d/24 p<0.05; max |Delta beta|=%.2f. Capsule: beta range and interquartile span.",
                        jack_summary$Significant_negative_after_removal[[1]],
                        jack_summary$Max_abs_delta_beta[[1]]),
@@ -954,10 +954,10 @@ p_jackknife <- ggplot(jack_capsule, aes(x = TL_beta, y = Strip_y)) +
     panel.grid.minor = element_blank(),
     plot.margin = margin(7, 9, 5, 8)
   )
-save_panel(p_jackknife, "Fig_R1C10c_study_jackknife_compact_v4", 6.3, 2.25)
+save_panel(p_jackknife, "Fig_TrophicControlsc_study_jackknife_compact_v4", 6.3, 2.25)
 
 # ---------------------------------------------------------------------------
-# Fig R1C10d v4: study-fixed permutation test
+# Fig TrophicControlsd v4: study-fixed permutation test
 # ---------------------------------------------------------------------------
 study_fixed_slope <- function(dat, response_col, tl_col = "TL") {
   d <- dat %>%
@@ -1021,8 +1021,8 @@ perm_summary <- perm_long %>%
     Label_hjust = if_else(Metric == "items/g", 0, 1)
   )
 
-write_csv(perm_null, file.path(DIR_DATA, "R1C10_study_fixed_permutation_null_v4.csv"))
-write_csv(perm_summary, file.path(DIR_DATA, "R1C10_study_fixed_permutation_summary_v4.csv"))
+write_csv(perm_null, file.path(DIR_DATA, "TrophicControls_study_fixed_permutation_null_v4.csv"))
+write_csv(perm_summary, file.path(DIR_DATA, "TrophicControls_study_fixed_permutation_summary_v4.csv"))
 
 p_perm <- ggplot(perm_null, aes(x = Null, fill = Metric, colour = Metric)) +
   geom_density(alpha = 0.18, linewidth = 0.65, adjust = 1.05) +
@@ -1039,7 +1039,7 @@ p_perm <- ggplot(perm_null, aes(x = Null, fill = Metric, colour = Metric)) +
   scale_fill_manual(values = c("items/g" = "#1F5E9C", "items/ind" = "#BFBFBF"), name = "Metric") +
   scale_colour_manual(values = c("items/g" = "#1F5E9C", "items/ind" = "#6E6E6E"), name = "Metric") +
   labs(
-    title = "R1C10d | Study-fixed permutation test of trophic dilution",
+    title = "TrophicControlsd | Study-fixed permutation test of trophic dilution",
     subtitle = "TL was permuted within each source study, preserving study-specific protocols, detection windows and sample structure",
     x = "Study-fixed TL slope for log10(1 + abundance)",
     y = "Permutation density"
@@ -1050,10 +1050,10 @@ p_perm <- ggplot(perm_null, aes(x = Null, fill = Metric, colour = Metric)) +
     panel.grid.major.y = element_blank(),
     panel.grid.minor = element_blank()
   )
-save_panel(p_perm, "Fig_R1C10d_study_fixed_permutation_v4", 8.4, 5.2)
+save_panel(p_perm, "Fig_TrophicControlsd_study_fixed_permutation_v4", 8.4, 5.2)
 
 # ---------------------------------------------------------------------------
-# Fig R1C10e v4: TL uncertainty stress test
+# Fig TrophicControlse v4: TL uncertainty stress test
 # ---------------------------------------------------------------------------
 fit_mc <- function(dat) {
   fit_tl_model(dat, "MP_g")$row
@@ -1096,7 +1096,7 @@ mc_results <- map_dfr(scenarios, function(sc) {
       mutate(Scenario = sc, Iteration = i)
   })
 })
-write_csv(mc_results, file.path(DIR_DATA, "R1C10_TL_uncertainty_stress_v4.csv"))
+write_csv(mc_results, file.path(DIR_DATA, "TrophicControls_TL_uncertainty_stress_v4.csv"))
 
 mc_summary <- mc_results %>%
   group_by(Scenario) %>%
@@ -1115,7 +1115,7 @@ mc_summary <- mc_results %>%
     Scenario = factor(Scenario, levels = rev(scenarios)),
     Label = sprintf("Pr(beta<0)=%.0f%%; Pr(p<0.05)=%.0f%%", 100 * Pr_negative, 100 * Pr_sig)
   )
-write_csv(mc_summary, file.path(DIR_DATA, "R1C10_TL_uncertainty_summary_v4.csv"))
+write_csv(mc_summary, file.path(DIR_DATA, "TrophicControls_TL_uncertainty_summary_v4.csv"))
 
 p_uncertainty <- ggplot(mc_summary, aes(y = Scenario)) +
   annotate("rect", xmin = -Inf, xmax = 0, ymin = -Inf, ymax = Inf, fill = "#EFF6F0", alpha = 0.95) +
@@ -1128,7 +1128,7 @@ p_uncertainty <- ggplot(mc_summary, aes(y = Scenario)) +
                       labels = percent_format(accuracy = 1), name = "Share significant") +
   scale_x_continuous(limits = c(-0.95, 0.55), breaks = c(-0.8, -0.6, -0.4, -0.2, 0, 0.2)) +
   labs(
-    title = "R1C10e | Trophic-level uncertainty stress test",
+    title = "TrophicControlse | Trophic-level uncertainty stress test",
     subtitle = "Primary ZINB-GLMM refitted after plausible TL perturbations; intervals summarize repeated fits",
     x = "TL coefficient under perturbed trophic-level assignments",
     y = NULL,
@@ -1136,29 +1136,29 @@ p_uncertainty <- ggplot(mc_summary, aes(y = Scenario)) +
   ) +
   theme_nature(8) +
   theme(legend.position = "bottom", panel.grid.major.y = element_blank())
-save_panel(p_uncertainty, "Fig_R1C10e_TL_uncertainty_stress_v4", 9.5, 5.2)
+save_panel(p_uncertainty, "Fig_TrophicControlse_TL_uncertainty_stress_v4", 9.5, 5.2)
 
 evidence_table <- tribble(
-  ~Figure, ~Role, ~Reviewer_request, ~Conclusion,
-  "Fig_R1C7b_detection_zero_rate_v4", "zero-rate forest diagnostic", "R1C7 zero inflation and detection-limit heterogeneity", "Zero proportions and Wilson confidence intervals do not indicate systematic zero inflation in lower-sensitivity windows; detection-limit heterogeneity is unlikely to explain the TL signal alone.",
-  "Fig_R1C7c_R1C10b_integrated_forest_v4", "single consolidated model-control forest", "R1C7 method controls and R1C10 robustness controls", "The TL coefficient remains negative under method, detection, tissue, dominant-method and sparse-family controls; items/ind is retained as the body-size contrast rather than repeated as a separate TL forest.",
-  "Fig_R1C10a_items_g_core_cluster_v4", "mass-normalized core clustering", "R1C10 habitat, origin and sample-composition controls", "Core outlines show where origin and major habitat groups concentrate; labels report the share of each group inside the displayed core while the fitted mass-normalized TL trend remains negative.",
-  "Fig_R1C10b_items_ind_core_cluster_v4", "individual-normalized core clustering", "R1C10 body-size normalization check", "The items/ind counterpart shows group clustering without a comparable negative TL trend, supporting a mass-normalized biodilution interpretation.",
-  "Fig_R1C10c_study_jackknife_compact_v4", "compact leave-one-study-out ZINB influence analysis", "R1C7/R1C10 robustness against study-level methodological heterogeneity", "All 24 source studies are tested by removing one study at a time and refitting the same ZINB GLMM; the mass-normalized TL coefficient remains negative after each removal.",
-  "Fig_R1C10d_study_fixed_permutation_v4", "study-fixed permutation test", "R1C7/R1C10 robustness against source-study and method confounding", "Within-study TL permutation preserves source-study protocols and sample structure; the observed items/g slope is more negative than the within-study null, whereas items/ind is not.",
-  "Fig_R1C10e_TL_uncertainty_stress_v4", "TL uncertainty stress test", "R1C10 trophic-level assignment uncertainty", "Plausible TL perturbations retain a negative TL coefficient distribution, directly addressing TL assignment uncertainty."
+  ~Figure, ~Role, ~Analysis_purpose, ~Conclusion,
+  "Fig_IngestionMethodsb_detection_zero_rate_v4", "zero-rate forest diagnostic", "IngestionMethods zero inflation and detection-limit heterogeneity", "Zero proportions and Wilson confidence intervals do not indicate systematic zero inflation in lower-sensitivity windows; detection-limit heterogeneity is unlikely to explain the TL signal alone.",
+  "Fig_IngestionMethodsc_TrophicControlsb_integrated_forest_v4", "single consolidated model-control forest", "IngestionMethods method controls and TrophicControls robustness controls", "The TL coefficient remains negative under method, detection, tissue, dominant-method and sparse-family controls; items/ind is retained as the body-size contrast rather than repeated as a separate TL forest.",
+  "Fig_TrophicControlsa_items_g_core_cluster_v4", "mass-normalized core clustering", "TrophicControls habitat, origin and sample-composition controls", "Core outlines show where origin and major habitat groups concentrate; labels report the share of each group inside the displayed core while the fitted mass-normalized TL trend remains negative.",
+  "Fig_TrophicControlsb_items_ind_core_cluster_v4", "individual-normalized core clustering", "TrophicControls body-size normalization check", "The items/ind counterpart shows group clustering without a comparable negative TL trend, supporting a mass-normalized biodilution interpretation.",
+  "Fig_TrophicControlsc_study_jackknife_compact_v4", "compact leave-one-study-out ZINB influence analysis", "IngestionMethods/TrophicControls robustness against study-level methodological heterogeneity", "All 24 source studies are tested by removing one study at a time and refitting the same ZINB GLMM; the mass-normalized TL coefficient remains negative after each removal.",
+  "Fig_TrophicControlsd_study_fixed_permutation_v4", "study-fixed permutation test", "IngestionMethods/TrophicControls robustness against source-study and method confounding", "Within-study TL permutation preserves source-study protocols and sample structure; the observed items/g slope is more negative than the within-study null, whereas items/ind is not.",
+  "Fig_TrophicControlse_TL_uncertainty_stress_v4", "TL uncertainty stress test", "TrophicControls trophic-level assignment uncertainty", "Plausible TL perturbations retain a negative TL coefficient distribution, directly addressing TL assignment uncertainty."
 )
-write_csv(evidence_table, file.path(DIR_DATA, "R1C7_R1C10_v4_evidence_table.csv"))
+write_csv(evidence_table, file.path(DIR_DATA, "IngestionMethods_TrophicControls_v4_evidence_table.csv"))
 
 manifest_v4 <- tibble(
   file_base = c(
-    "Fig_R1C7b_detection_zero_rate_v4",
-    "Fig_R1C7c_R1C10b_integrated_forest_v4",
-    "Fig_R1C10a_items_g_core_cluster_v4",
-    "Fig_R1C10b_items_ind_core_cluster_v4",
-    "Fig_R1C10c_study_jackknife_compact_v4",
-    "Fig_R1C10d_study_fixed_permutation_v4",
-    "Fig_R1C10e_TL_uncertainty_stress_v4"
+    "Fig_IngestionMethodsb_detection_zero_rate_v4",
+    "Fig_IngestionMethodsc_TrophicControlsb_integrated_forest_v4",
+    "Fig_TrophicControlsa_items_g_core_cluster_v4",
+    "Fig_TrophicControlsb_items_ind_core_cluster_v4",
+    "Fig_TrophicControlsc_study_jackknife_compact_v4",
+    "Fig_TrophicControlsd_study_fixed_permutation_v4",
+    "Fig_TrophicControlse_TL_uncertainty_stress_v4"
   )
 ) %>%
   mutate(
@@ -1167,7 +1167,7 @@ manifest_v4 <- tibble(
   )
 write_csv(manifest_v4, file.path(DIR_FIG, "figure_manifest_v4.csv"))
 
-cat("\nR1C7/R1C10 visual revision v4 complete.\n")
+cat("\nIngestionMethods/TrophicControls visual revision v4 complete.\n")
 cat(sprintf("Figures: %s\n", DIR_FIG))
 cat(sprintf("Data: %s\n", DIR_DATA))
 graphics.off()
