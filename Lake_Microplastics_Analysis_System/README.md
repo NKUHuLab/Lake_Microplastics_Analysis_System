@@ -1,4 +1,4 @@
-# Lake Microplastics Analysis System (v1.0)
+# Lake Microplastics Analysis System (revision update)
 This repository contains the source code, data processing pipelines, and optimization engines used in the study: "Intensive Aquaculture Contributes to Microplastic Pollution and Threatens Species in Lakes".
 ________________________________________
 # 1. System Requirements
@@ -7,7 +7,7 @@ Operating Systems
 •	Linux: Tested on Ubuntu 20.04 and 22.04.
 •	macOS: Tested on macOS Monterey (12.0) and later.
 # Software Dependencies
-The system requires both Python and R environments.
+The system requires both Python and R environments. The versions below describe the original workflow; the self-contained revision pathway calculation requires only NumPy and pandas and was checked with NumPy 2.3.5 and pandas 3.0.1.
 Python (Version 3.9.12 tested)
 •	scikit-learn (1.0.2)
 •	pandas (1.4.2)
@@ -43,35 +43,61 @@ Typical Install Time
 •	~10–15 minutes on a standard desktop computer with a stable internet connection.
 ________________________________________
 # 3. Demo (Quick Start)
-We have provided a subset of the global dataset (240 lakes) in Data/Demo/ to verify the installation.
-Instructions
-1.	Run the prediction demo:
-Bash
-python 01_Train_RandomForest.py 
-2.	Run the optimization demo:
-Bash
-python 14_GA_Optimization_Engine.py
 
-Expected Run Time
-•	~2–3 minutes on a normal desktop.
+The existing feature demonstration dataset is [Demo_dataset.csv](Demo_dataset.csv). It illustrates the input structure; full model training and global prediction require the original complete inputs.
+
+For a runnable revision example with all its numerical inputs included, execute from the repository root (one directory above this README):
+
+```sh
+pip install -r analysis/revision/r1c4/requirements.txt
+python analysis/revision/r1c4/code/run_all.py
+```
+
+This reproduces 10,000 literature-informed Monte Carlo draws and checks agreement with the frozen final pathway results. Outputs are written to `analysis/revision/r1c4/outputs/`. See the [pathway calculation guide](../analysis/revision/r1c4/README.md) for inputs, methods and interpretation.
+
 ________________________________________
 # 4. Instructions for Use
 Configuration
-Before running the full analysis, update the root path in Utils/config.py
 
-To reproduce the quantitative results and figures in the manuscript, execute scripts in the following order:
-Step	Script	Function	Target Result
-1	01_Train_RandomForest.py	Global MP abundance prediction	Fig. 1A, Fig. S2-S4
-2	02_SHAP_Clustering.ipynb	Feature attribution & Mode ID	Fig. 1B-C, Fig. S8
-3	03_Analysis_Step2.R	In vivo validation (ZINB-GLMM)	Fig. 4, Table S2
-4	10_Risk_Assessment.py	IUCN species exposure calculation	Fig. 4A-D
-5	14_GA_Optimization.py	Mitigation scenario modeling	Fig. 5, Fig. 6
+The default analysis root is the repository directory. Set `LAKE_MP_ROOT` to use another workspace; input and output paths are defined in [Utils/config.py](Utils/config.py). The original Python scripts import `config` from `Utils`. For example, in PowerShell from the repository root (one directory above this README), after supplying the configured inputs:
+
+```powershell
+$env:PYTHONPATH = (Resolve-Path './Lake_Microplastics_Analysis_System/Utils').Path
+python ./Lake_Microplastics_Analysis_System/01_Main_Analysis_Pipeline/01_Train_RandomForest.py
+```
+
+The original workflow remains in `Lake_Microplastics_Analysis_System/`:
+
+| Step | Script or directory | Function |
+| --- | --- | --- |
+| 1 | `01_Main_Analysis_Pipeline/01_Train_RandomForest.py` and `05_Global_Prediction.py` | Model fitting and global MP prediction |
+| 2 | `01_Main_Analysis_Pipeline/03_SHAP_Global_Analysis.py` and `08_SHAP_Clustering_Analysis.py` | Feature attribution and clustering |
+| 3 | `03_Bio_Validation_MPB/02_Analysis_Step2.R` | Organismal ingestion analysis |
+| 4 | `02_Biodiversity_Risk_IUCN/` | Species–lake exposure analyses |
+| 5 | `01_Main_Analysis_Pipeline/14_GA_Optimization_Engine.ipynb` | Mitigation scenario optimization |
+
+Selected revision analyses are in [analysis/revision](../analysis/revision/README.md), including grouped validation, hydrological moderation, biological sensitivity and trait controls, OSM proxies, training-subset sensitivity and literature-informed pathway calculations. Their original input requirements remain in place; selected publication products do not replace the full analysis samples.
+
+The standalone two-box equations and residence-time scenario can be run with:
+
+```sh
+python analysis/revision/hydrology_gam_and_box_model/box_model_core.py
+```
+
 # How to use on your own data
-1.	Format your lake features (hydrology, land use, fishery intensity) according to the template in Data/Template_Features.csv.
-2.	Place the file in Input/ and run 01_Train_RandomForest.py --input YourData.csv.
+
+1. Use the predictor names in `Utils/config.py` and the existing demonstration dataset to prepare your inputs.
+2. Supply the configured `data/train/train_data.csv`, including the predictors and `ln` response, before training. Global prediction also requires the configured feature and spatial files. The original training script does not accept a `--input` argument.
+
+# 5. Selected Data
+
+See the [dataset index](../data/Dataset_index.csv) and [data guide](../data/README.md) for selected lake-level OSM proxies, box-model parameter evidence, costs, implementation and related timing, checked pathway sources, and lake predictions with uncertainty. The [SHP archive](../data/geospatial/lake_prediction_exposure_high.zip) contains selected lake polygons with uncertainty and derived aggregate exposure attributes, together with its field dictionary and selection criteria. All numerical inputs used in the revised pathway calculation are included under `analysis/revision/r1c4/`.
+
+The water and biota supplementary datasets and the existing feature demo are not duplicated in this update. Model reliability classes and source-verification scopes are described separately in the data guide. Data curation is ongoing.
+
 ________________________________________
 # License
-This project is licensed under the MIT License.
+The software is licensed under the [MIT License](License). Data reuse follows the [dataset-specific conditions](../data/README.md), including OSM, HydroLAKES and IUCN attribution and applicable restrictions.
 # Contact
 For any issues or questions, please contact Xiangang Hu (huxiangang@nankai.edu.cn).
 

@@ -1,0 +1,104 @@
+{
+  "draws": 10000,
+  "seed": 42,
+  "centers": {
+    "WS_nonfish": 15.8,
+    "Fishery": 13.0,
+    "Atmospheric": 9.8,
+    "Hydrological": 35.2
+  },
+  "other_range": [
+    0.0,
+    15.0
+  ],
+  "legacy_CVs_for_matching_other_rng_only": {
+    "WS_nonfish": 0.9273,
+    "Fishery": 1.2439,
+    "Atmospheric": 0.8863,
+    "Hydrological": 0.815
+  },
+  "components": {
+    "WS_nonfish": [
+      "Mismanaged",
+      "Total_Plast",
+      "Cultivated_land",
+      "Artificial_surface"
+    ],
+    "Fishery": [
+      "fish_gdp_sqkm"
+    ],
+    "Atmospheric": [
+      "emis_tyre_TSP_HEG",
+      "emis_brake_TSP_HEG",
+      "PM2_5",
+      "PM10"
+    ],
+    "Hydrological": [
+      "Total_POP_SERVED",
+      "Average_DF",
+      "Primary_Waste_Discharge",
+      "Secondary_Waste_Discharge",
+      "Advanced_Waste_Discharge"
+    ]
+  },
+  "stream_features": {
+    "Atmospheric": [
+      "PM2_5",
+      "PM10"
+    ],
+    "Tire": [
+      "emis_tyre_TSP_HEG"
+    ],
+    "Brake": [
+      "emis_brake_TSP_HEG"
+    ],
+    "Hydrological": [
+      "Total_POP_SERVED",
+      "Average_DF",
+      "Primary_Waste_Discharge",
+      "Secondary_Waste_Discharge",
+      "Advanced_Waste_Discharge"
+    ],
+    "Fishery": [
+      "fish_gdp_sqkm"
+    ],
+    "Agricultural": [
+      "Cultivated_land"
+    ],
+    "Urban": [
+      "Artificial_surface"
+    ],
+    "Textile": [
+      "Total_Plast"
+    ],
+    "Production": [
+      "Total_Plast"
+    ],
+    "Mismanaged": [
+      "Mismanaged"
+    ],
+    "Transport": [
+      "Mismanaged",
+      "Total_Plast",
+      "Cultivated_land",
+      "Artificial_surface"
+    ]
+  },
+  "sensitivity_relative_step": 0.1,
+  "stream_window": 20,
+  "windows": [
+    50,
+    100,
+    250,
+    500,
+    1000,
+    2500,
+    5000
+  ],
+  "ternary_display_draws": 3000,
+  "scope": "Conditional relative attribution sensitivity; not physical lake input apportionment or Bayesian posterior",
+  "main_run": "All-corpus eligible inputs, no direction-selected subset",
+  "fishery_boundary": "No admitted direct release evidence; unit multiplier is an unquantified-data-gap assumption, not evidence of zero uncertainty",
+  "other_boundary": "Assumed Uniform(0,15) score; not observed residual lake input or the original eight-feature Other group",
+  "screening_corpus_record_count": 20786
+}

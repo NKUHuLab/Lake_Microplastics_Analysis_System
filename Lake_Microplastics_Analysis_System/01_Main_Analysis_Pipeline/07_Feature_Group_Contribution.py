@@ -10,6 +10,7 @@
 import pandas as pd
 import numpy as np
 import os
+from pathlib import Path
 import joblib
 import shap
 from sklearn.ensemble import RandomForestRegressor
@@ -23,7 +24,7 @@ import warnings
 warnings.filterwarnings("ignore")
 
 # --- 核心文件路径 ---
-PROJECT_ROOT = r"E:\lake-MP-W"
+PROJECT_ROOT = str(Path(os.environ.get("LAKE_MP_ROOT", Path(__file__).resolve().parents[2])).resolve())
 TRAIN_DATA_PATH = os.path.join(PROJECT_ROOT, "data", "train", "train_data.csv")
 MODEL_PATH = os.path.join(PROJECT_ROOT, "model", "random_forest_model.pkl")
 
@@ -69,7 +70,7 @@ def calculate_contributions():
         print(f"加载模型: {MODEL_PATH}")
         model = joblib.load(MODEL_PATH)
         print(f"加载数据: {TRAIN_DATA_PATH}")
-        data = pd.read_csv(TRAIN_DATA_PATH).dropna(subset=[TARGET_VARIABLE])
+        data = pd.read_csv(TRAIN_DATA_PATH).dropna(subset=[TARGET_VARIABLE]).reset_index(drop=True)
     except Exception as e:
         print(f"!!! 文件加载失败: {e}\n请确保路径正确且文件存在。")
         return None, None

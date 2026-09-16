@@ -1,0 +1,4 @@
+"""Endpoint-to-stream mapping retained from the approved analysis."""
+from pathlib import Path
+OUT = Path(__file__).resolve().parents[1] / "outputs/admission"
+ENDPOINT_STREAM = {'Atmospheric_flux': 'Atmospheric', 'Atmospheric_areal_observation': 'Atmospheric', 'Air_concentration': 'Atmospheric', 'Tire_emission': 'Tire', 'Brake_emission': 'Brake', 'Road_emission': 'Road', 'Fishery_release': 'Fishery', 'Hydrological_effluent': 'Hydrological', 'Hydrological_influent': 'Hydrological', 'Hydrological_water_observation': 'Hydrological', 'Hydrological_transmission': 'Hydrological', 'Urban_water_observation': 'Urban', 'Urban_transmission': 'Urban', 'Agricultural_flux': 'Agricultural', 'Agricultural_soil_observation': 'Agricultural', 'Textile_release': 'Textile', 'Textile_transmission': 'Textile', 'Mismanaged_release': 'Mismanaged', 'Production_flow': 'Production', 'Watershed_transport': 'Transport', 'Transport_transmission': 'Transport'}

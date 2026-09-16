@@ -2,10 +2,11 @@
 # code/config.py
 
 import os
+from pathlib import Path
 from itertools import combinations
 
 # --- Project Root ---
-PROJECT_ROOT = r"E:\lake-MP-W"
+PROJECT_ROOT = str(Path(os.environ.get("LAKE_MP_ROOT", Path(__file__).resolve().parents[2])).resolve())
 
 # --- Core Input File Paths ---
 TRAIN_DATA_PATH = os.path.join(PROJECT_ROOT, "data", "train", "train_data.csv")

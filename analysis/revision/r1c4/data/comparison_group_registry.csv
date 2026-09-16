@@ -1,0 +1,6 @@
+﻿comparison_group,unit,quantities,document_title_groups,common_reference,reference_active,comparison_basis
+MP_deposition_count_dry,items/day/m2,2,2,25.330127018922195,True,"Same deposition phase, count per area per day; location and collection protocols may differ"
+MP_deposition_count_wet,items/day/m2,2,2,71.0,True,"Same deposition phase, count per area per day; location and collection protocols may differ"
+polyester_laundering_mass_per_kg,g/kg,10,4,0.1249894058285045,True,"Same synthetic polymer, release per textile mass and wash; washing conditions may differ"
+road_runoff_TRWP_mass,g/m3,2,2,2.040569415042095,True,"Explicit road-runoff tire/road-wear mass concentration; a marker-based proxy, not dissolved chemicals"
+whole_plant_total_MP_transmission,fraction,3,2,0.17290654600401045,True,Whole-plant total MP transmission only; not fiber-specific or individual-stage removal
